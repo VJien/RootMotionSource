@@ -10,13 +10,10 @@
 #include "RootMotionSourceComponent.generated.h"
 
 
-// DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMoveToDlg, FRMS_MoveTo, SourceSetting);
-// DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDynamicMoveToDlg, FRMS_DynamicMoveTo, SourceSetting);
-// DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FJumpToDlg, FRMS_Jump, SourceSetting);
 
 class URootMotionSourceTask_Base;
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FTaskDlg, URootMotionSourceTask_Base*, TaskObject, bool, bSuccess);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FTaskDlg1p, URootMotionSourceTask_Base*, TaskObject);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FRMSTaskDlg2p, URootMotionSourceTask_Base*, TaskObject, bool, bSuccess);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRMSTaskDlg1p, URootMotionSourceTask_Base*, TaskObject);
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent), BlueprintType, Blueprintable)
 class ROOTMOTIONEXTENSION_API URootMotionSourceComponent : public UGameplayTasksComponent
@@ -45,9 +42,9 @@ public:
 
 public:
 	UPROPERTY(BlueprintCallable, BlueprintAssignable)
-	FTaskDlg1p OnTaskBegin;
+	FRMSTaskDlg1p OnTaskBegin;
 	UPROPERTY(BlueprintCallable, BlueprintAssignable)
-	FTaskDlg OnTaskEnd;
+	FRMSTaskDlg2p OnTaskEnd;
 	
 	UCharacterMovementComponent* GetMovementComponent() const
 	{
