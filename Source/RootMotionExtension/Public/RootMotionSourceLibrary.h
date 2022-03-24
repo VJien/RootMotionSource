@@ -54,7 +54,9 @@ public:
 	                                                      USkeletalMeshComponent* Mesh, UAnimSequence* DataAnimation,
 	                                                      FName InstanceName, int32 Priority, FVector TargetLocation,
 	                                                      bool bLocalTarget, bool bUseCustomDuration = false,
-	                                                      float CustomDuration = 1.0, float AnimWarpingScale = 1.0);
+	                                                      float CustomDuration = 1.0, float AnimWarpingScale = 1.0,
+	                                                      ERootMotionAnimWarpingType WarpingType =
+		                                                      ERootMotionAnimWarpingType::BasedOnLength);
 	/**
 	* 基于ApplyRootMotionSource_AnimationAdjustment, 通过动画帧来决定播放时段,  <位置偏移是基于脚底的>
 	* @param DataAnimation      参考RootMotion数据的动画, 该节点本身不负责播放动画
@@ -67,7 +69,10 @@ public:
 	                                                             UAnimSequence* DataAnimation, FName InstanceName,
 	                                                             int32 Priority, FVector TargetLocation,
 	                                                             bool bLocalTarget, int32 FromFrame = 0,
-	                                                             int32 TargetFram = -1, float TimeScale = 1.0f, float AnimWarpingScale =1.0);
+	                                                             int32 TargetFram = -1, float TimeScale = 1.0f,
+	                                                             float AnimWarpingScale = 1.0,
+	                                                             ERootMotionAnimWarpingType WarpingType =
+		                                                             ERootMotionAnimWarpingType::BasedOnLength);
 	/**
 	* 基于ApplyRootMotionSource_AnimationAdjustment, 通过动画时间来决定播放时段,  <位置偏移是基于脚底的>
 	* @param DataAnimation      参考RootMotion数据的动画, 该节点本身不负责播放动画
@@ -80,7 +85,10 @@ public:
 	                                                            UAnimSequence* DataAnimation, FName InstanceName,
 	                                                            int32 Priority, FVector TargetLocation,
 	                                                            bool bLocalTarget, float FromTime = 0,
-	                                                            int32 TargetTime = -1, float TimeScale = 1.0f, float AnimWarpingScale=1.0);
+	                                                            int32 TargetTime = -1, float TimeScale = 1.0f,
+	                                                            float AnimWarpingScale = 1.0,
+	                                                            ERootMotionAnimWarpingType WarpingType =
+		                                                            ERootMotionAnimWarpingType::BasedOnLength);
 
 	/**
 	* 需要配置动画通知窗口, 通过WarpingTarget配置对应窗口的目标点信息,做到分阶段的运动适配,类似MotionWarping
@@ -89,13 +97,14 @@ public:
 	* @param WarpingTarget		需要与动画通知严格匹配
 	* @param Tolerance	        允许动画通知窗口之间的公差, 小于此值即忽略不计
 	* @param AnimWarpingScale   动画信息的缩放, 如果是0代表使用线性位移
+	* @param bExcludeEndAnimMotion 排除末尾的动画位移 
 	* 
 	*/
 	UFUNCTION(BlueprintCallable, Category="RootMotionExtension", meta = (AdvancedDisplay = "7"))
 	static bool ApplyRootMotionSource_AnimationWarping(UCharacterMovementComponent* MovementComponent,
 	                                                   USkeletalMeshComponent* Mesh, UAnimSequence* DataAnimation,
 	                                                   TMap<FName, FVector> WarpingTarget, float TimeScale = 1,
-	                                                   float Tolerance = 0.01, float AnimWarpingScale = 1.0);
+	                                                   float Tolerance = 0.01, float AnimWarpingScale = 1.0, bool bExcludeEndAnimMotion = false);
 
 	static bool GetRootMotionSourceWindow(UAnimSequence* DataAnimation, FName InstanceName,
 	                                      FRootMotionSoueceWindowData& Window);
@@ -146,7 +155,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category="RootMotionExtension", meta = (AdvancedDisplay = "7"))
 	static void GetCurrentRootMotionSourceTime(UCharacterMovementComponent* MovementComponent, FName InstanceName,
 	                                           float& Time, float& Duration);
-	
+
 	UFUNCTION(BlueprintCallable, Category="RootMotionExtension", meta = (AdvancedDisplay = "7"), BlueprintPure)
 	static bool IsRootMotionSourceValid(UCharacterMovementComponent* MovementComponent, FName InstanceName);
 	UFUNCTION(BlueprintCallable, Category="RootMotionExtension", meta = (AdvancedDisplay = "7"), BlueprintPure)
@@ -159,4 +168,8 @@ public:
 
 	static TSharedPtr<FRootMotionSource> GetRootMotionSourceByID(UCharacterMovementComponent* MovementComponent,
 	                                                             int32 ID);
+
+	static void CalcAnimWarpingScale(FVector& OriginOffset, ERootMotionAnimWarpingType Type,
+	                                 FVector AnimRootMotionLinear, FVector RMSTargetLinearOffset, float Scale = 1,
+	                                 float Tolerance = 0.1);
 };

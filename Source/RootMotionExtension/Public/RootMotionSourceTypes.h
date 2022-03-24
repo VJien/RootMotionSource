@@ -6,7 +6,15 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "RootMotionSourceTypes.generated.h"
 
+UENUM(BlueprintType)
+enum class ERootMotionAnimWarpingType :uint8
+{
+	// compared with total length
+	BasedOnLength = 0,
+	// compared with 3 axis
+	BasedOn3Axis,
 
+};
 /**
  * 
  */
