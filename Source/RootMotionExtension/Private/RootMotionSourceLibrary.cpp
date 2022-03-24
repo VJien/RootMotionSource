@@ -234,7 +234,7 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationAdjustment(
 	//用动态曲线的方式 , 而非静态,
 	UCurveVector* OffsetCV = NewObject<UCurveVector>();
 	FRichCurve CurveX, CurveY, CurveZ;
-	float LastTime = 0;
+	float LastWindowEndTime = 0;
 	/*
 	 *遍历每一帧获取当前动画的RootMotion位置,
 	 *减去线性当前帧的位置,得到了动画的曲线偏移值
@@ -246,7 +246,7 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationAdjustment(
 		FTransform CurrFrameTM;
 
 		float Fraction = CurrentTime / Duration;
-		float LastFraction = LastTime / Duration;
+		float LastFraction = LastWindowEndTime / Duration;
 		//获取当前时间的rootMotion
 		CurrFrameTM = DataAnimation->ExtractRootMotion(0, CurrentTime, false);
 
@@ -284,7 +284,7 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationAdjustment(
 				                                            LocalLinearOffsetFraction + CurveOffset) - FVector(
 					0, 0, HalfHeight), 5.0, 4, FColor::Blue, 5.0);
 		}
-		LastTime = CurrentTime;
+		LastWindowEndTime = CurrentTime;
 	}
 	OffsetCV->FloatCurves[0] = CurveX;
 	OffsetCV->FloatCurves[1] = CurveY;
@@ -395,7 +395,7 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationAdjustmentByTime(
 		}
 		//获取RootMotion数据
 		FTransform RMT = DataAnimation->ExtractRootMotionFromRange(FromTime, TargetTime);
-		RMT =  RMT * Mesh2Char;
+		RMT = RMT * Mesh2Char;
 
 		//用动态曲线的方式 , 而非静态,
 		UCurveVector* OffsetCV = NewObject<UCurveVector>();
@@ -594,6 +594,7 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationWarping(
 	//******************
 	FVector LastWarpingTarget = FVector::ZeroVector;
 
+	float LastWindowEndTime = 0;
 	float LastTime = 0;
 	FTransform FinalTargetAnimRM, CurrFrameAnimRM, CurrTargetAnimRM, LastTargetAnimRM;
 
@@ -634,10 +635,12 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationWarping(
 		//如果不排除末尾的动画位移, 那么需要把最后一个动画通知窗口以后的RootMotion都加进来
 		if (!bExcludeEndAnimMotion)
 		{
-			auto TM = DataAnimation->ExtractRootMotion(TriggerDatas[lastTargetIdx].WindowData.EndTime, AnimLength, false);
-			TM =  TM * Mesh2Char;
-			auto ActorRM =  TM.GetLocation();
-			FVector WorldRM = ActorRM.X * Character->GetActorForwardVector() + ActorRM.Y * Character->GetActorRightVector()
+			auto TM = DataAnimation->ExtractRootMotion(TriggerDatas[lastTargetIdx].WindowData.EndTime, AnimLength,
+			                                           false);
+			TM = TM * Mesh2Char;
+			auto ActorRM = TM.GetLocation();
+			FVector WorldRM = ActorRM.X * Character->GetActorForwardVector() + ActorRM.Y * Character->
+				GetActorRightVector()
 				+ ActorRM.Z * Character->GetActorUpVector();
 			WorldTarget = LastWarpingTarget + WorldRM;
 		}
@@ -648,42 +651,43 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationWarping(
 			Duration = TriggerDatas[lastTargetIdx].WindowData.EndTime * TimeScale;
 			AnimLength = TriggerDatas[lastTargetIdx].WindowData.EndTime;
 		}
-
-
-		
 	}
 
 	//获取整体RootMotion数据
 	FTransform TotalAnimRM = DataAnimation->ExtractRootMotionFromRange(0, AnimLength);
 	TotalAnimRM = TotalAnimRM * Mesh2Char;
 
-	
+
 	//最终的目标是胶囊体中心, 所以要加上半高
 	WorldTarget += HalfHeightVec;
+
 	if (CVarRMS_Debug.GetValueOnGameThread() == 1)
 	{
 		//绘制最后目标
-		UKismetSystemLibrary::DrawDebugBox(Mesh, WorldTarget, FVector(5, 5, 20), FColor::Purple, FRotator::ZeroRotator,
-		                                   5, 5.0);
+		UKismetSystemLibrary::DrawDebugSphere(
+			Mesh, WorldTarget, 20.f, 12, FColor::Purple, 5, 1);
 	}
+
 	//最终目标的RootMotion
 	FinalTargetAnimRM = DataAnimation->ExtractRootMotion(0, AnimLength, false);
-	FinalTargetAnimRM = FinalTargetAnimRM * Mesh2Char ;
+	FinalTargetAnimRM = FinalTargetAnimRM * Mesh2Char;
 
 	FVector CurveOffset = FVector::ZeroVector;
 	//逐帧遍历
-	for (float CurrentTime = 0; CurrentTime < Duration; CurrentTime += FrameTime * TimeScale)
+	for (float CurrentTime = 0; CurrentTime <= AnimLength; CurrentTime += FrameTime)
 	{
+		//todo 需要区分缩放时间和真实的时间, 真实时间用于提取动画RM数据
+		const float TimeScaled = CurrentTime * TimeScale;
 		bool bNeedUpdateTarget = false;
 		//如果当前时间已经大于上一次数据的最后时间, 说明换了一个窗口期, 记录上一次的时间和目标
-		if (CurrentTime > TrigData.WindowData.EndTime)
+		if (TimeScaled > TrigData.WindowData.EndTime * TimeScale)
 		{
-			LastTime = TrigData.WindowData.EndTime;
+			LastWindowEndTime = LastTime;
 			LastTargetWS = CurrTargetWS;
 			bNeedUpdateTarget = true;
 			LastTargetAnimRM = CurrTargetAnimRM;
 		}
-
+		//查询窗口数据需要用原始时间
 		if (!FindTriggerDataByTime(TriggerDatas, CurrentTime, TrigData))
 		{
 			continue;
@@ -694,9 +698,10 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationWarping(
 		}
 
 		//当前分段内的百分比
-		float WindowFraction = (CurrentTime - TrigData.WindowData.StartTime) / (TrigData.WindowData.EndTime- TrigData.WindowData.StartTime);
-		//整体百分比
-		float Fraction = CurrentTime / Duration;
+		float WindowFraction = (TimeScaled - TrigData.WindowData.StartTime* TimeScale) / (TrigData.WindowData.EndTime* TimeScale - TrigData.
+			WindowData.StartTime* TimeScale);
+		//整体百分比, 都是缩放过的数据
+		float Fraction = TimeScaled / Duration;
 
 		//获取当前时间段的rootMotion
 		CurrFrameAnimRM = DataAnimation->ExtractRootMotion(0, CurrentTime, false);
@@ -729,7 +734,7 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationWarping(
 			//否则就使用动画本身的位移
 			if (!bHasWarpingTarget)
 			{
-				const auto T = DataAnimation->ExtractRootMotion(LastTime, TrigData.WindowData.EndTime, false);
+				const auto T = DataAnimation->ExtractRootMotion(LastWindowEndTime, TrigData.WindowData.EndTime, false);
 				LocalOffset = (T * Mesh2Char).GetLocation();
 				FVector WorldOffset = LocalOffset.X * Character->GetActorForwardVector() + LocalOffset.Y * Character->
 					GetActorRightVector() + LocalOffset.Z * Character->GetActorUpVector();
@@ -758,14 +763,15 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationWarping(
 		FVector Offset_Anim = CurrFrameAnimRM.GetLocation() - (LastTargetAnimRM.GetLocation() + WindowAnimLinearOffset);
 
 		//计算目标线性位移与动画RM线性位移的比值
-		CalcAnimWarpingScale(Offset_Anim, ERootMotionAnimWarpingType::BasedOnLength, WindowAnimLinearOffset,
-		                     WindowLinearOffset, AnimWarpingMulti);
+		const float WarpRatio = FMath::IsNearlyZero(WindowAnimLinearOffset.Size(), Tolerance)? 0 : WindowLinearOffset.Size() / WindowAnimLinearOffset.Size();
+		Offset_Anim *= WarpRatio * AnimWarpingMulti;
+		//CalcAnimWarpingScale(Offset_Anim, ERootMotionAnimWarpingType::BasedOnLength, WindowAnimLinearOffset,WindowLinearOffset, AnimWarpingMulti);
 		CurveOffset = Offset_LinearBase + Offset_Anim;
 
 
-		CurveX.AddKey(CurrentTime / Duration, CurveOffset.X);
-		CurveY.AddKey(CurrentTime / Duration, CurveOffset.Y);
-		CurveZ.AddKey(CurrentTime / Duration, CurveOffset.Z);
+		CurveX.AddKey(TimeScaled / Duration, CurveOffset.X);
+		CurveY.AddKey(TimeScaled / Duration, CurveOffset.Y);
+		CurveZ.AddKey(TimeScaled / Duration, CurveOffset.Z);
 
 
 		if (CVarRMS_Debug.GetValueOnGameThread() == 1)
@@ -794,6 +800,7 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationWarping(
 					Character->GetActorTransform(), CurveOffset) - FVector(0, 0, HalfHeight), 5.0, 4, FColor::Blue,
 				5.0);
 		}
+		LastTime = CurrentTime;
 	}
 	OffsetCV->FloatCurves[0] = CurveX;
 	OffsetCV->FloatCurves[1] = CurveY;
