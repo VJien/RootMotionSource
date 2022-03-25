@@ -56,7 +56,9 @@ public:
 	                                                      bool bLocalTarget, bool bUseCustomDuration = false,
 	                                                      float CustomDuration = 1.0, float AnimWarpingScale = 1.0,
 	                                                      ERootMotionAnimWarpingType WarpingType =
-		                                                      ERootMotionAnimWarpingType::BasedOnLength);
+		                                                      ERootMotionAnimWarpingType::BasedOnLength,
+	                                                      ERootMotionSourceAnimWarpingAxis WarpingAxis =
+		                                                      ERootMotionSourceAnimWarpingAxis::XYZ);
 	/**
 	* 基于ApplyRootMotionSource_AnimationAdjustment, 通过动画帧来决定播放时段,  <位置偏移是基于脚底的>
 	* @param DataAnimation      参考RootMotion数据的动画, 该节点本身不负责播放动画
@@ -72,7 +74,9 @@ public:
 	                                                             int32 TargetFram = -1, float TimeScale = 1.0f,
 	                                                             float AnimWarpingScale = 1.0,
 	                                                             ERootMotionAnimWarpingType WarpingType =
-		                                                             ERootMotionAnimWarpingType::BasedOnLength);
+		                                                             ERootMotionAnimWarpingType::BasedOnLength,
+	                                                             ERootMotionSourceAnimWarpingAxis WarpingAxis =
+		                                                             ERootMotionSourceAnimWarpingAxis::XYZ);
 	/**
 	* 基于ApplyRootMotionSource_AnimationAdjustment, 通过动画时间来决定播放时段,  <位置偏移是基于脚底的>
 	* @param DataAnimation      参考RootMotion数据的动画, 该节点本身不负责播放动画
@@ -88,7 +92,9 @@ public:
 	                                                            int32 TargetTime = -1, float TimeScale = 1.0f,
 	                                                            float AnimWarpingScale = 1.0,
 	                                                            ERootMotionAnimWarpingType WarpingType =
-		                                                            ERootMotionAnimWarpingType::BasedOnLength);
+		                                                            ERootMotionAnimWarpingType::BasedOnLength,
+	                                                            ERootMotionSourceAnimWarpingAxis WarpingAxis =
+		                                                            ERootMotionSourceAnimWarpingAxis::XYZ);
 
 	/**
 	* 需要配置动画通知窗口, 通过WarpingTarget配置对应窗口的目标点信息,做到分阶段的运动适配,类似MotionWarping
@@ -104,7 +110,10 @@ public:
 	static bool ApplyRootMotionSource_AnimationWarping(UCharacterMovementComponent* MovementComponent,
 	                                                   USkeletalMeshComponent* Mesh, UAnimSequence* DataAnimation,
 	                                                   TMap<FName, FVector> WarpingTarget, float TimeScale = 1,
-	                                                   float Tolerance = 0.01, float AnimWarpingScale = 1.0, bool bExcludeEndAnimMotion = false, ERootMotionSourceAnimWarpingAxis WarpingAxis = ERootMotionSourceAnimWarpingAxis::XYZ);
+	                                                   float Tolerance = 0.01, float AnimWarpingScale = 1.0,
+	                                                   bool bExcludeEndAnimMotion = false,
+	                                                   ERootMotionSourceAnimWarpingAxis WarpingAxis =
+		                                                   ERootMotionSourceAnimWarpingAxis::XYZ);
 
 	static bool GetRootMotionSourceWindow(UAnimSequence* DataAnimation, FName InstanceName,
 	                                      FRootMotionSoueceWindowData& Window);
