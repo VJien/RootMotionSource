@@ -5,6 +5,18 @@
 #include "CoreMinimal.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "RootMotionSourceTypes.generated.h"
+UENUM(BlueprintType)
+enum class ERootMotionSourceAnimWarpingAxis :uint8
+{
+	None = 0,
+	X,
+	Y,
+	Z,
+	XY,
+	XZ,
+	YZ,
+	XYZ
+};
 
 UENUM(BlueprintType)
 enum class ERootMotionAnimWarpingType :uint8

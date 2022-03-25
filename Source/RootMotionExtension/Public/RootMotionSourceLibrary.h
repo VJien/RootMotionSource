@@ -104,7 +104,7 @@ public:
 	static bool ApplyRootMotionSource_AnimationWarping(UCharacterMovementComponent* MovementComponent,
 	                                                   USkeletalMeshComponent* Mesh, UAnimSequence* DataAnimation,
 	                                                   TMap<FName, FVector> WarpingTarget, float TimeScale = 1,
-	                                                   float Tolerance = 0.01, float AnimWarpingScale = 1.0, bool bExcludeEndAnimMotion = false);
+	                                                   float Tolerance = 0.01, float AnimWarpingScale = 1.0, bool bExcludeEndAnimMotion = false, ERootMotionSourceAnimWarpingAxis WarpingAxis = ERootMotionSourceAnimWarpingAxis::XYZ);
 
 	static bool GetRootMotionSourceWindow(UAnimSequence* DataAnimation, FName InstanceName,
 	                                      FRootMotionSoueceWindowData& Window);
@@ -172,4 +172,8 @@ public:
 	static void CalcAnimWarpingScale(FVector& OriginOffset, ERootMotionAnimWarpingType Type,
 	                                 FVector AnimRootMotionLinear, FVector RMSTargetLinearOffset, float Scale = 1,
 	                                 float Tolerance = 0.1);
+
+	static void ConvWorldOffsetToRmsSpace(FVector& Offset, FVector Start, FVector Target);
+
+	static void FiltAnimCurveOffsetAxisData(FVector& AnimOffset, ERootMotionSourceAnimWarpingAxis Axis);
 };

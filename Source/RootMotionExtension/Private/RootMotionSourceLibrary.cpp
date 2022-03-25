@@ -477,7 +477,7 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationAdjustmentByTime(
 bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationWarping(
 	UCharacterMovementComponent* MovementComponent, USkeletalMeshComponent* Mesh, UAnimSequence* DataAnimation,
 	TMap<FName, FVector> WarpingTarget, float TimeScale,
-	float Tolerance, float AnimWarpingMulti, bool bExcludeEndAnimMotion)
+	float Tolerance, float AnimWarpingMulti, bool bExcludeEndAnimMotion, ERootMotionSourceAnimWarpingAxis WarpingAxis)
 {
 	if (!MovementComponent || !DataAnimation || !Mesh || WarpingTarget.Num() == 0 || TimeScale <= 0)
 	{
@@ -698,8 +698,9 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationWarping(
 		}
 
 		//当前分段内的百分比
-		float WindowFraction = (TimeScaled - TrigData.WindowData.StartTime* TimeScale) / (TrigData.WindowData.EndTime* TimeScale - TrigData.
-			WindowData.StartTime* TimeScale);
+		float WindowFraction = (TimeScaled - TrigData.WindowData.StartTime * TimeScale) / (TrigData.WindowData.EndTime *
+			TimeScale - TrigData.
+			            WindowData.StartTime * TimeScale);
 		//整体百分比, 都是缩放过的数据
 		float Fraction = TimeScaled / Duration;
 
@@ -751,21 +752,21 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationWarping(
 		FVector WindowLinearOffset = (CurrTargetWS - LastTargetWS) * WindowFraction;
 		//全局线性偏移
 		FVector FinalLinearOffset = (WorldTarget - StartLocation) * Fraction;
-		//当前窗口的线性位移与基础运动线性位移的偏差, 本地空间
-		FVector Offset_LinearBase = UKismetMathLibrary::InverseTransformLocation(
-				Character->GetActorTransform(), LastTargetWS + WindowLinearOffset) -
-			UKismetMathLibrary::InverseTransformLocation(Character->GetActorTransform(),
-			                                             (StartLocation + FinalLinearOffset));
-
+		//todo 这里有个坑, 曲线信息是start到target的朝向空间的, 即X的方向是target-start的向量朝向; 所以需要转换成相对空间
+		FVector Offset_LinearBase = LastTargetWS + WindowLinearOffset - (StartLocation + FinalLinearOffset);
+		ConvWorldOffsetToRmsSpace(Offset_LinearBase, StartLocation - HalfHeightVec, WorldTarget);
 
 		FVector WindowAnimLinearOffset = (CurrTargetAnimRM.GetLocation() - LastTargetAnimRM.GetLocation()) *
 			WindowFraction;
 		FVector Offset_Anim = CurrFrameAnimRM.GetLocation() - (LastTargetAnimRM.GetLocation() + WindowAnimLinearOffset);
+		ConvWorldOffsetToRmsSpace(Offset_Anim, StartLocation - HalfHeightVec, WorldTarget);
 
 		//计算目标线性位移与动画RM线性位移的比值
-		const float WarpRatio = FMath::IsNearlyZero(WindowAnimLinearOffset.Size(), Tolerance)? 0 : WindowLinearOffset.Size() / WindowAnimLinearOffset.Size();
+		const float WarpRatio = FMath::IsNearlyZero(WindowAnimLinearOffset.Size(), Tolerance)
+			                        ? 0
+			                        : WindowLinearOffset.Size() / WindowAnimLinearOffset.Size();
 		Offset_Anim *= WarpRatio * AnimWarpingMulti;
-		//CalcAnimWarpingScale(Offset_Anim, ERootMotionAnimWarpingType::BasedOnLength, WindowAnimLinearOffset,WindowLinearOffset, AnimWarpingMulti);
+		FiltAnimCurveOffsetAxisData(Offset_Anim, WarpingAxis);
 		CurveOffset = Offset_LinearBase + Offset_Anim;
 
 
@@ -793,12 +794,7 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationWarping(
 				FVector(0, 0, HalfHeight), 5.0, 4, FColor::Green, 5.0);
 			//当前窗口的线性位置
 			UKismetSystemLibrary::DrawDebugSphere(Mesh, LastTargetWS + WindowLinearOffset - FVector(0, 0, HalfHeight),
-			                                      5.0, 4, FColor::Orange, 5.0);
-			//矫正后的每一帧位置
-			UKismetSystemLibrary::DrawDebugSphere(
-				Mesh, FinalLinearOffset + UKismetMathLibrary::TransformLocation(
-					Character->GetActorTransform(), CurveOffset) - FVector(0, 0, HalfHeight), 5.0, 4, FColor::Blue,
-				5.0);
+			                                      5.0, 4, FColor::Blue, 5.0);
 		}
 		LastTime = CurrentTime;
 	}
@@ -1139,6 +1135,76 @@ void URootMotionSourceLibrary::CalcAnimWarpingScale(FVector& OriginOffset, ERoot
 				              ? 0
 				              : RMSTargetLinearOffset.Z / AnimRootMotionLinear.Z;
 			OriginOffset *= WarpRatio * Scale;
+			break;
+		}
+	default:
+		break;
+	}
+}
+
+void URootMotionSourceLibrary::ConvWorldOffsetToRmsSpace(FVector& OffsetWS, FVector Start, FVector Target)
+{
+	FRotator FacingRot = (Target - Start).Rotation();
+	FacingRot.Pitch = 0;
+	//UKismetMathLibrary::InverseTransformDirection(FTransform(FacingRot,StartLocation - HalfHeightVec,FVector::OneVector),Offset_LinearBase); //这样不行吗???
+	const FVector ForwardVec = UKismetMathLibrary::GetForwardVector(FacingRot);
+	const FVector RightVec = UKismetMathLibrary::GetRightVector(FacingRot);
+	//const FVector UpVec = UKismetMathLibrary::GetUpVector(FacingRot);
+	FVector ProjFwd = OffsetWS.ProjectOnTo(ForwardVec);
+	FVector ProjRt = OffsetWS.ProjectOnTo(RightVec);
+	//FVector ProjUp = OffsetWS.ProjectOnTo(UpVec);
+	OffsetWS = FVector(ProjFwd.Size() * (ProjFwd.GetSafeNormal() | ForwardVec.GetSafeNormal()),
+	                   ProjRt.Size() * (ProjRt.GetSafeNormal() | RightVec.GetSafeNormal()),
+	                   OffsetWS.Z);
+}
+
+void URootMotionSourceLibrary::FiltAnimCurveOffsetAxisData(FVector& AnimOffset, ERootMotionSourceAnimWarpingAxis Axis)
+{
+	switch (Axis)
+	{
+	case ERootMotionSourceAnimWarpingAxis::None:
+		{
+			AnimOffset.X = 0;
+			AnimOffset.Y = 0;
+			AnimOffset.Z = 0;
+			break;
+		}
+	case ERootMotionSourceAnimWarpingAxis::X:
+		{
+			AnimOffset.Y = 0;
+			AnimOffset.Z = 0;
+			break;
+		}
+	case ERootMotionSourceAnimWarpingAxis::Y:
+		{
+			AnimOffset.X = 0;
+			AnimOffset.Z = 0;
+			break;
+		}
+	case ERootMotionSourceAnimWarpingAxis::Z:
+		{
+			AnimOffset.X = 0;
+			AnimOffset.Y = 0;
+			break;
+		}
+	case ERootMotionSourceAnimWarpingAxis::XY:
+		{
+			AnimOffset.Z = 0;
+			break;
+		}
+	case ERootMotionSourceAnimWarpingAxis::XZ:
+		{
+			AnimOffset.Y = 0;
+			break;
+		}
+	case ERootMotionSourceAnimWarpingAxis::YZ:
+		{
+			AnimOffset.X = 0;
+
+			break;
+		}
+	case ERootMotionSourceAnimWarpingAxis::XYZ:
+		{
 			break;
 		}
 	default:
