@@ -24,10 +24,10 @@ public:
 	* @param Setting.TargetLocation		参考StartLocation的目标位置(要考虑HalfHeight)
 	* 
 	*/
-	UFUNCTION(BlueprintCallable, Category="RootMotionExtension", meta = (AdvancedDisplay = "7"))
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource", meta = (AdvancedDisplay = "7"))
 	static int32 ApplyRootMotionSource_MoveToForce(UCharacterMovementComponent* MovementComponent, FRMS_MoveTo Setting);
 	//通过高度和距离适配一个抛物线跳跃运动
-	UFUNCTION(BlueprintCallable, Category="RootMotionExtension", meta = (AdvancedDisplay = "7"))
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource", meta = (AdvancedDisplay = "7"))
 	static int32 ApplyRootMotionSource_JumpForce(UCharacterMovementComponent* MovementComponent, FRMS_Jump Setting);
 	/**
 	* 移动到一个动态目标, 需要通过UpdateDynamicMoveToTarget设置目标
@@ -35,7 +35,7 @@ public:
 	* @param Setting.TargetLocation		参考StartLocation的目标位置(要考虑HalfHeight)
 	* 
 	*/
-	UFUNCTION(BlueprintCallable, Category="RootMotionExtension", meta = (AdvancedDisplay = "7"))
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource", meta = (AdvancedDisplay = "7"))
 	static int32 ApplyRootMotionSource_DynamicMoveToForce(UCharacterMovementComponent* MovementComponent,
 	                                                      FRMS_DynamicMoveTo Setting);
 
@@ -45,9 +45,10 @@ public:
 	* @param Setting.TargetLocation		参考StartLocation的目标位置(要考虑HalfHeight)
 	* 
 	*/
-	UFUNCTION(BlueprintCallable, Category="RootMotionExtension", meta = (AdvancedDisplay = "7"))
-	static int32 ApplyRootMotionSource_MoveToForce_Parabola(UCharacterMovementComponent* MovementComponent, FRMS_MoveToParabola Setting);
-	
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource", meta = (AdvancedDisplay = "7"))
+	static int32 ApplyRootMotionSource_MoveToForce_Parabola(UCharacterMovementComponent* MovementComponent,
+	                                                        FRMS_MoveToParabola Setting);
+
 #pragma region Animation
 	/**
 	* 直接使用动画的RootMotion数据,效果等同于播放RootMotion蒙太奇动画
@@ -56,7 +57,7 @@ public:
 	* @param TimeScale        动画时间缩放
 	* 
 	*/
-	UFUNCTION(BlueprintCallable, Category="RootMotionExtension", meta = (AdvancedDisplay = "7"))
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource", meta = (AdvancedDisplay = "7"))
 	static bool ApplyRootMotionSource_SimpleAnimation(UCharacterMovementComponent* MovementComponent,
 	                                                  USkeletalMeshComponent* Mesh, UAnimSequence* DataAnimation,
 	                                                  FName InstanceName, int32 Priority,
@@ -68,7 +69,7 @@ public:
 	* @param bLocalTarget		如果为true,那么偏移信息是本地空间的
 	* 
 	*/
-	UFUNCTION(BlueprintCallable, Category="RootMotionExtension", meta = (AdvancedDisplay = "7"))
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource", meta = (AdvancedDisplay = "7"))
 	static bool ApplyRootMotionSource_AnimationAdjustment(UCharacterMovementComponent* MovementComponent,
 	                                                      USkeletalMeshComponent* Mesh, UAnimSequence* DataAnimation,
 	                                                      FName InstanceName, int32 Priority, FVector TargetLocation,
@@ -84,7 +85,7 @@ public:
 	* @param TargetFram		    如果小于0那么使用最后一帧
 	* 
 	*/
-	UFUNCTION(BlueprintCallable, Category="RootMotionExtension", meta = (AdvancedDisplay = "7"))
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource", meta = (AdvancedDisplay = "7"))
 	static bool ApplyRootMotionSource_AnimationAdjustmentByFrame(UCharacterMovementComponent* MovementComponent,
 	                                                             USkeletalMeshComponent* Mesh,
 	                                                             UAnimSequence* DataAnimation, FName InstanceName,
@@ -102,7 +103,7 @@ public:
 	* @param TargetTime		    如果小于0那么使用动画长度的时间
 	* 
 	*/
-	UFUNCTION(BlueprintCallable, Category="RootMotionExtension", meta = (AdvancedDisplay = "7"))
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource", meta = (AdvancedDisplay = "7"))
 	static bool ApplyRootMotionSource_AnimationAdjustmentByTime(UCharacterMovementComponent* MovementComponent,
 	                                                            USkeletalMeshComponent* Mesh,
 	                                                            UAnimSequence* DataAnimation, FName InstanceName,
@@ -125,7 +126,7 @@ public:
 	* @param bExcludeEndAnimMotion 排除末尾的动画位移 
 	* 
 	*/
-	UFUNCTION(BlueprintCallable, Category="RootMotionExtension", meta = (AdvancedDisplay = "7"))
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource", meta = (AdvancedDisplay = "7"))
 	static bool ApplyRootMotionSource_AnimationWarping(UCharacterMovementComponent* MovementComponent,
 	                                                   USkeletalMeshComponent* Mesh, UAnimSequence* DataAnimation,
 	                                                   TMap<FName, FVector> WarpingTarget, float TimeScale = 1,
@@ -145,7 +146,7 @@ public:
 #pragma endregion Animation
 
 	//模拟力的RootMotion效果,类似AddForce
-	UFUNCTION(BlueprintCallable, Category="RootMotionExtension", meta = (AdvancedDisplay = "7"))
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource", meta = (AdvancedDisplay = "7"))
 	static int32 ApplyRootMotionSource_ConstantForece(UCharacterMovementComponent* MovementComponent,
 	                                                  FName InstanceName, ERootMotionAccumulateMode AccumulateMod,
 	                                                  int32 Priority, FVector WorldDirection, float Strength,
@@ -154,7 +155,7 @@ public:
 	                                                  FVector FinishSetVelocity, float FinishClampVelocity = 0,
 	                                                  bool bEnableGravity = false);
 	//模拟范围力的RootMotion效果, 类似AddRadialForce
-	UFUNCTION(BlueprintCallable, Category="RootMotionExtension", meta = (AdvancedDisplay = "7"))
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource", meta = (AdvancedDisplay = "7"))
 	static int32 ApplyRootMotionSource_RadialForece(UCharacterMovementComponent* MovementComponent, FName InstanceName,
 	                                                ERootMotionAccumulateMode AccumulateMod, int32 Priority,
 	                                                AActor* LocationActor, FVector Location, float Strength,
@@ -166,27 +167,27 @@ public:
 	                                                FVector FinishSetVelocity, float FinishClampVelocity = 0);
 
 	//刷新动态目标的位置
-	UFUNCTION(BlueprintCallable, Category="RootMotionExtension", meta = (AdvancedDisplay = "7"))
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource", meta = (AdvancedDisplay = "7"))
 	static void UpdateDynamicMoveToTarget(UCharacterMovementComponent* MovementComponent, FName InstanceName,
 	                                      FVector NewTarget);
 	//移除RMS
-	UFUNCTION(BlueprintCallable, Category="RootMotionExtension", meta = (AdvancedDisplay = "7"))
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource", meta = (AdvancedDisplay = "7"))
 	static void RemoveRootMotionSource(UCharacterMovementComponent* MovementComponent, FName InstanceName);
 	/*
 	 * 刷新DynamicMoveTo的持续时间
 	 * ********此方法有运动突变风险******** 
 	*/
-	UFUNCTION(BlueprintCallable, Category="RootMotionExtension", meta = (AdvancedDisplay = "7"))
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource", meta = (AdvancedDisplay = "7"))
 	static void UpdateDynamicMoveDuration(UCharacterMovementComponent* MovementComponent, FName InstanceName,
 	                                      float NewDuration);
 	//获取RMS的时间信息
-	UFUNCTION(BlueprintCallable, Category="RootMotionExtension", meta = (AdvancedDisplay = "7"))
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource", meta = (AdvancedDisplay = "7"))
 	static void GetCurrentRootMotionSourceTime(UCharacterMovementComponent* MovementComponent, FName InstanceName,
 	                                           float& Time, float& Duration);
 
-	UFUNCTION(BlueprintCallable, Category="RootMotionExtension", meta = (AdvancedDisplay = "7"), BlueprintPure)
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource", meta = (AdvancedDisplay = "7"), BlueprintPure)
 	static bool IsRootMotionSourceValid(UCharacterMovementComponent* MovementComponent, FName InstanceName);
-	UFUNCTION(BlueprintCallable, Category="RootMotionExtension", meta = (AdvancedDisplay = "7"), BlueprintPure)
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource", meta = (AdvancedDisplay = "7"), BlueprintPure)
 	static bool IsRootMotionSourceIdValid(UCharacterMovementComponent* MovementComponent, int32 ID);
 
 	static TSharedPtr<FRootMotionSource> GetRootMotionSource(UCharacterMovementComponent* MovementComponent,
@@ -204,4 +205,31 @@ public:
 	static void ConvWorldOffsetToRmsSpace(FVector& Offset, FVector Start, FVector Target);
 
 	static void FiltAnimCurveOffsetAxisData(FVector& AnimOffset, ERootMotionSourceAnimWarpingAxis Axis);
+
+
+
+	/*
+	 * 根据时间获取正在运行的RMS的实时位置
+	 */
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource", BlueprintPure)
+	static bool GetRootMotionSourceLocation_Runtime(UCharacterMovementComponent* MovementComponent, FName InstanceName,
+	                                               float Time, FVector& OutLocation);
+	/**
+	* 根据时间获取MoveTo的位置
+	* <位置是角色中心>
+	*/
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource", BlueprintPure)
+	static bool GetRootMotionSourceLocation_MoveTo(FVector& OutLocation, UCharacterMovementComponent* MovementComponent,
+	                                               FVector StartLocation, FVector TargetLocation,
+	                                               float Duration,
+	                                               float Time, UCurveVector* PathOffsetCurve = nullptr);
+	/**
+	* 根据时间获取Jump的位置
+	* <位置是角色中心>
+	*/
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource", BlueprintPure)
+	static bool GetRootMotionSourceLocation_Jump(FVector& OutLocation, UCharacterMovementComponent* MovementComponent,
+	                                             FVector StartLocation, float Distance, float Height, FRotator Rotation,
+	                                             float Duration, float Time, UCurveVector* PathOffsetCurve = nullptr,
+	                                             UCurveFloat* TimeMappingCurve = nullptr);
 };

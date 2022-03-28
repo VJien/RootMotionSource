@@ -15,6 +15,25 @@
 class UAnimNotifyState_RootMotionSource;
 TAutoConsoleVariable<int32> CVarRMS_Debug(TEXT("b.RMS.Debug"), 0, TEXT("0: Disable 1: Enable "), ECVF_Cheat);
 PRAGMA_DISABLE_OPTIMIZATION
+static float EvaluateFloatCurveAtFraction(const UCurveFloat& Curve, const float Fraction)
+{
+	float MinCurveTime(0.f);
+	float MaxCurveTime(1.f);
+
+	Curve.GetTimeRange(MinCurveTime, MaxCurveTime);
+	return Curve.GetFloatValue(FMath::GetRangeValue(FVector2D(MinCurveTime, MaxCurveTime), Fraction));
+}
+
+static FVector EvaluateVectorCurveAtFraction(const UCurveVector& Curve, const float Fraction)
+{
+	float MinCurveTime(0.f);
+	float MaxCurveTime(1.f);
+
+	Curve.GetTimeRange(MinCurveTime, MaxCurveTime);
+	return Curve.GetVectorValue(FMath::GetRangeValue(FVector2D(MinCurveTime, MaxCurveTime), Fraction));
+}
+
+
 
 int32 URootMotionSourceLibrary::ApplyRootMotionSource_MoveToForce(UCharacterMovementComponent* MovementComponent,
                                                                   FRMS_MoveTo Setting)
@@ -117,14 +136,14 @@ int32 URootMotionSourceLibrary::ApplyRootMotionSource_MoveToForce_Parabola(
 	{
 		float OffsetZ = (Setting.TargetLocation - Setting.StartLocation).Z;
 		Target.Z = Setting.StartLocation.Z;
-		
+
 
 		FRichCurve ZCurve; //= Setting.ParabolaCurve->FloatCurve;
-		for (int32 i=0; i<=Setting.Segment; i++)
+		for (int32 i = 0; i <= Setting.Segment; i++)
 		{
-			const float Time =  (static_cast<float>(i)/static_cast<float>(Setting.Segment)) * Setting.Duration;
-			const float Value = Setting.ParabolaCurve->GetFloatValue(Time);
-			ZCurve.AddKey(Time, OffsetZ * Value);
+			const float Fraction =  static_cast<float>(i) / static_cast<float>(Setting.Segment);
+			const float Value = Setting.ParabolaCurve->GetFloatValue(Fraction);
+			ZCurve.AddKey(Fraction, OffsetZ * Value);
 		}
 		// for (auto p: Setting.ParabolaCurve->FloatCurve.Keys)
 		// {
@@ -132,11 +151,10 @@ int32 URootMotionSourceLibrary::ApplyRootMotionSource_MoveToForce_Parabola(
 		// 	ZCurve.AddKey(p.Time, OffsetZ * Fraction + p.Value);
 		// }
 		PathCurve->FloatCurves[2] = ZCurve;
-		
 	}
 	MoveToForce->TargetLocation = Target;
-	
-	
+
+
 	MoveToForce->PathOffsetCurve = PathCurve;
 	MoveToForce->FinishVelocityParams.Mode = static_cast<ERootMotionFinishVelocityMode>(static_cast<uint8>(Setting.
 		VelocityOnFinishMode));
@@ -1269,6 +1287,125 @@ void URootMotionSourceLibrary::FiltAnimCurveOffsetAxisData(FVector& AnimOffset, 
 	default:
 		break;
 	}
+}
+
+bool URootMotionSourceLibrary::GetRootMotionSourceLocation_Runtime(UCharacterMovementComponent* MovementComponent,
+                                                                  FName InstanceName, float Time, FVector& OutLocation)
+{
+	if (!MovementComponent)
+	{
+		return false;
+	}
+	auto RMS = GetRootMotionSource(MovementComponent, InstanceName);
+	if (!RMS.IsValid())
+	{
+		return false;
+	}
+	if (auto RMS_MoveTo = StaticCastSharedPtr<FRootMotionSource_MoveToForce>(RMS))
+	{
+		const float Fraction = Time / RMS_MoveTo->GetDuration();
+		const FVector PathOffset = RMS_MoveTo->GetPathOffsetInWorldSpace(Fraction);
+		const FVector CurrentTargetLocation = FMath::Lerp<FVector, float>(
+			RMS_MoveTo->StartLocation, RMS_MoveTo->TargetLocation, Fraction);
+		OutLocation = CurrentTargetLocation + PathOffset;
+		return true;
+	}
+	else if (auto RMS_MoveToDy = StaticCastSharedPtr<FRootMotionSource_MoveToDynamicForce>(RMS))
+	{
+		const float Fraction = Time / RMS_MoveTo->GetDuration();
+		const FVector PathOffset = RMS_MoveTo->GetPathOffsetInWorldSpace(Fraction);
+		const FVector CurrentTargetLocation = FMath::Lerp<FVector, float>(
+			RMS_MoveTo->StartLocation, RMS_MoveTo->TargetLocation, Fraction);
+		OutLocation = CurrentTargetLocation + PathOffset;
+		return true;
+	}
+	else if (auto RMS_Jump = StaticCastSharedPtr<FRootMotionSource_JumpForce>(RMS))
+	{
+		float Fraction = Time / RMS_Jump->GetDuration();
+		if (RMS_Jump->TimeMappingCurve)
+		{
+			float MinCurveTime(0.f);
+			float MaxCurveTime(1.f);
+			//
+			// RMS_Jump->TimeMappingCurve->GetTimeRange(MinCurveTime, MaxCurveTime);
+			//
+			// Fraction =  RMS_Jump->TimeMappingCurve->GetFloatValue(FMath::GetRangeValue(FVector2D(MinCurveTime, MaxCurveTime), Fraction));
+
+			Fraction = EvaluateFloatCurveAtFraction(*RMS_Jump->TimeMappingCurve, Fraction);
+			const FVector TargetRelativeLocation = RMS_Jump->GetRelativeLocation(Fraction);
+			if (MovementComponent->GetOwner())
+			{
+				OutLocation = MovementComponent->GetOwner()->GetActorLocation() + TargetRelativeLocation;
+				return true;
+			}
+		}
+		
+	}
+
+	return false;
+}
+
+
+bool URootMotionSourceLibrary::GetRootMotionSourceLocation_MoveTo(FVector& OutLocation,UCharacterMovementComponent* MovementComponent,
+                                                                  FVector StartLocation, FVector TargetLocation,
+                                                                  float Duration,
+                                                                  float Time,UCurveVector* PathOffsetCurve)
+{
+	if (!MovementComponent || Duration<=0 || Time<0 ||Time>Duration)
+	{
+		return false;
+	}
+	const float Fraction = Time / Duration;
+	FVector CurrentTargetLocation = FMath::Lerp<FVector, float>(StartLocation, TargetLocation, Fraction);
+	FVector PathOffset = FVector::ZeroVector;
+	if (PathOffsetCurve)
+	{
+		PathOffset = EvaluateVectorCurveAtFraction(*PathOffsetCurve, Fraction);
+		FRotator FacingRotation((TargetLocation-StartLocation).Rotation());
+		FacingRotation.Pitch = 0.f;
+		PathOffset = FacingRotation.RotateVector(PathOffset);
+	}
+	OutLocation = CurrentTargetLocation + PathOffset;
+	
+	return true;
+}
+
+bool URootMotionSourceLibrary::GetRootMotionSourceLocation_Jump(FVector& OutLocation, UCharacterMovementComponent* MovementComponent,
+                                                                FVector StartLocation, float Distance, float Height, FRotator Rotation,
+                                                                float Duration,  float Time , UCurveVector* PathOffsetCurve, UCurveFloat* TimeMappingCurve)
+{
+	if (!MovementComponent || Duration<=0 || Time<0 ||Time>Duration)
+	{
+		return false;
+	}
+	FVector PathOffset(FVector::ZeroVector);
+	float Fraction = Time / Duration;
+	if (TimeMappingCurve)
+	{
+		Fraction = EvaluateFloatCurveAtFraction(*TimeMappingCurve, Fraction);
+	}
+	if (PathOffsetCurve)
+	{
+		PathOffset = EvaluateVectorCurveAtFraction(*PathOffsetCurve, Fraction);
+	}
+	else
+	{
+		const float Phi = 2.f*Fraction - 1;
+		const float Z = -(Phi*Phi) + 1;
+		PathOffset.Z = Z;
+	}
+	if (Height >= 0.f)
+	{
+		PathOffset.Z *= Height;
+	}
+
+	
+	FRotator FacingRotation(Rotation);
+	FacingRotation.Pitch = 0.f;
+	FVector RelativeLocationFacingSpace = FVector(Fraction * Distance, 0.f, 0.f) + PathOffset;
+	RelativeLocationFacingSpace = FacingRotation.RotateVector(RelativeLocationFacingSpace);
+	OutLocation = StartLocation + RelativeLocationFacingSpace;
+	return true;
 }
 
 PRAGMA_ENABLE_OPTIMIZATION
