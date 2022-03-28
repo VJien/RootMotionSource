@@ -94,6 +94,57 @@ int32 URootMotionSourceLibrary::ApplyRootMotionSource_DynamicMoveToForce(
 	return MovementComponent->ApplyRootMotionSource(MoveToActorForce);
 }
 
+int32 URootMotionSourceLibrary::ApplyRootMotionSource_MoveToForce_Parabola(
+	UCharacterMovementComponent* MovementComponent, FRMS_MoveToParabola Setting)
+{
+	if (!MovementComponent)
+	{
+		return -1;
+	}
+	TSharedPtr<FRootMotionSource_MoveToForce> MoveToForce = MakeShared<FRootMotionSource_MoveToForce>();
+	MoveToForce->InstanceName = Setting.InstanceName;
+	MoveToForce->AccumulateMode = Setting.AccumulateMod;
+	MoveToForce->Settings.SetFlag(
+		static_cast<ERootMotionSourceSettingsFlags>(static_cast<uint8>(Setting.SourcesSetting)));
+	MoveToForce->Priority = Setting.Priority;
+
+	MoveToForce->StartLocation = Setting.StartLocation;
+	MoveToForce->Duration = Setting.Duration;
+	MoveToForce->bRestrictSpeedToExpected = Setting.bRestrictSpeedToExpected;
+	FVector Target = Setting.TargetLocation;
+	UCurveVector* PathCurve = NewObject<UCurveVector>();
+	if (Setting.ParabolaCurve)
+	{
+		float OffsetZ = (Setting.TargetLocation - Setting.StartLocation).Z;
+		Target.Z = Setting.StartLocation.Z;
+		
+
+		FRichCurve ZCurve; //= Setting.ParabolaCurve->FloatCurve;
+		for (int32 i=0; i<=Setting.Segment; i++)
+		{
+			const float Time =  (static_cast<float>(i)/static_cast<float>(Setting.Segment)) * Setting.Duration;
+			const float Value = Setting.ParabolaCurve->GetFloatValue(Time);
+			ZCurve.AddKey(Time, OffsetZ * Value);
+		}
+		// for (auto p: Setting.ParabolaCurve->FloatCurve.Keys)
+		// {
+		// 	const float Fraction = p.Time / Setting.Duration;
+		// 	ZCurve.AddKey(p.Time, OffsetZ * Fraction + p.Value);
+		// }
+		PathCurve->FloatCurves[2] = ZCurve;
+		
+	}
+	MoveToForce->TargetLocation = Target;
+	
+	
+	MoveToForce->PathOffsetCurve = PathCurve;
+	MoveToForce->FinishVelocityParams.Mode = static_cast<ERootMotionFinishVelocityMode>(static_cast<uint8>(Setting.
+		VelocityOnFinishMode));
+	MoveToForce->FinishVelocityParams.SetVelocity = Setting.FinishSetVelocity;
+	MoveToForce->FinishVelocityParams.ClampVelocity = Setting.FinishClampVelocity;
+	return MovementComponent->ApplyRootMotionSource(MoveToForce);
+}
+
 bool URootMotionSourceLibrary::ApplyRootMotionSource_SimpleAnimation(UCharacterMovementComponent* MovementComponent,
                                                                      USkeletalMeshComponent* Mesh,
                                                                      UAnimSequence* DataAnimation, FName InstanceName,

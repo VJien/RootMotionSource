@@ -18,17 +18,36 @@ class ROOTMOTIONEXTENSION_API URootMotionSourceLibrary : public UBlueprintFuncti
 {
 	GENERATED_BODY()
 public:
-	//移动到一个目标点
+	/**
+	* 移动到一个点
+	* @param Setting.StartLocation      角色会基于此开始移动,所以请确保是Actor当前的Location
+	* @param Setting.TargetLocation		参考StartLocation的目标位置(要考虑HalfHeight)
+	* 
+	*/
 	UFUNCTION(BlueprintCallable, Category="RootMotionExtension", meta = (AdvancedDisplay = "7"))
 	static int32 ApplyRootMotionSource_MoveToForce(UCharacterMovementComponent* MovementComponent, FRMS_MoveTo Setting);
 	//通过高度和距离适配一个抛物线跳跃运动
 	UFUNCTION(BlueprintCallable, Category="RootMotionExtension", meta = (AdvancedDisplay = "7"))
 	static int32 ApplyRootMotionSource_JumpForce(UCharacterMovementComponent* MovementComponent, FRMS_Jump Setting);
-	//移动到一个动态目标, 需要通过UpdateDynamicMoveToTarget设置目标
+	/**
+	* 移动到一个动态目标, 需要通过UpdateDynamicMoveToTarget设置目标
+	* @param Setting.StartLocation      角色会基于此开始移动,所以请确保是Actor当前的Location
+	* @param Setting.TargetLocation		参考StartLocation的目标位置(要考虑HalfHeight)
+	* 
+	*/
 	UFUNCTION(BlueprintCallable, Category="RootMotionExtension", meta = (AdvancedDisplay = "7"))
 	static int32 ApplyRootMotionSource_DynamicMoveToForce(UCharacterMovementComponent* MovementComponent,
 	                                                      FRMS_DynamicMoveTo Setting);
 
+	/**
+	* 抛物线的形式移动到一个点, 通过一个曲线来设定运动轨迹
+	* @param Setting.StartLocation      角色会基于此开始移动,所以请确保是Actor当前的Location
+	* @param Setting.TargetLocation		参考StartLocation的目标位置(要考虑HalfHeight)
+	* 
+	*/
+	UFUNCTION(BlueprintCallable, Category="RootMotionExtension", meta = (AdvancedDisplay = "7"))
+	static int32 ApplyRootMotionSource_MoveToForce_Parabola(UCharacterMovementComponent* MovementComponent, FRMS_MoveToParabola Setting);
+	
 #pragma region Animation
 	/**
 	* 直接使用动画的RootMotion数据,效果等同于播放RootMotion蒙太奇动画

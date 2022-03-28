@@ -102,7 +102,24 @@ public:
 	UPROPERTY(BlueprintReadWrite)
 	ESourceSettingsFlags SourcesSetting =  ESourceSettingsFlags::UseSensitiveLiftoffCheck;
 };
-
+USTRUCT(BlueprintType)
+struct FRMS_MoveToParabola : public  FRMS_Base
+{
+	GENERATED_BODY()
+public:
+	UPROPERTY(BlueprintReadWrite)
+	bool bRestrictSpeedToExpected = false;
+	UPROPERTY(BlueprintReadWrite)
+	UCurveFloat* ParabolaCurve = nullptr;
+	UPROPERTY(BlueprintReadWrite)
+	int32 Segment = 8;
+	UPROPERTY(BlueprintReadWrite)
+	FVector StartLocation = FVector::ZeroVector;
+	UPROPERTY(BlueprintReadWrite)
+	FVector TargetLocation= FVector::ZeroVector;
+	UPROPERTY(BlueprintReadWrite)
+	ESourceSettingsFlags SourcesSetting =  ESourceSettingsFlags::UseSensitiveLiftoffCheck;
+};
 USTRUCT(BlueprintType)
 struct FRMS_DynamicMoveTo : public  FRMS_MoveTo
 {
