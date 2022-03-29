@@ -67,13 +67,15 @@ public:
 	* 依据动画RootMotion数据适配目标点的运动,效果类似MotionWarping,  <位置偏移是基于脚底的>
 	* @param DataAnimation      参考RootMotion数据的动画, 该节点本身不负责播放动画
 	* @param bLocalTarget		如果为true,那么偏移信息是本地空间的
+	* @param bTargetBasedOnFoot 目标位置是基于脚底还是胶囊体中心
 	* 
 	*/
 	UFUNCTION(BlueprintCallable, Category="RootMotionSource", meta = (AdvancedDisplay = "7"))
 	static bool ApplyRootMotionSource_AnimationAdjustment(UCharacterMovementComponent* MovementComponent,
 	                                                      USkeletalMeshComponent* Mesh, UAnimSequence* DataAnimation,
 	                                                      FName InstanceName, int32 Priority, FVector TargetLocation,
-	                                                      bool bLocalTarget, bool bUseCustomDuration = false,
+	                                                      bool bLocalTarget, bool bTargetBasedOnFoot = true,
+	                                                      bool bUseCustomDuration = false,
 	                                                      float CustomDuration = 1.0, float AnimWarpingScale = 1.0,
 	                                                      ERootMotionAnimWarpingType WarpingType =
 		                                                      ERootMotionAnimWarpingType::BasedOnLength,
@@ -90,7 +92,8 @@ public:
 	                                                             USkeletalMeshComponent* Mesh,
 	                                                             UAnimSequence* DataAnimation, FName InstanceName,
 	                                                             int32 Priority, FVector TargetLocation,
-	                                                             bool bLocalTarget, int32 FromFrame = 0,
+	                                                             bool bLocalTarget, bool bTargetBasedOnFoot = true,
+	                                                             int32 FromFrame = 0,
 	                                                             int32 TargetFram = -1, float TimeScale = 1.0f,
 	                                                             float AnimWarpingScale = 1.0,
 	                                                             ERootMotionAnimWarpingType WarpingType =
@@ -108,7 +111,8 @@ public:
 	                                                            USkeletalMeshComponent* Mesh,
 	                                                            UAnimSequence* DataAnimation, FName InstanceName,
 	                                                            int32 Priority, FVector TargetLocation,
-	                                                            bool bLocalTarget, float FromTime = 0,
+	                                                            bool bLocalTarget, bool bTargetBasedOnFoot = true,
+	                                                            float FromTime = 0,
 	                                                            int32 TargetTime = -1, float TimeScale = 1.0f,
 	                                                            float AnimWarpingScale = 1.0,
 	                                                            ERootMotionAnimWarpingType WarpingType =
@@ -118,18 +122,19 @@ public:
 
 	/**
 	* 需要配置动画通知窗口, 通过WarpingTarget配置对应窗口的目标点信息,做到分阶段的运动适配,类似MotionWarping
-	* <位置偏移是基于脚底的>
+	* <请确认位置是基于脚底还是角色中心>
 	* @param DataAnimation      参考RootMotion数据的动画, 该节点本身不负责播放动画
 	* @param WarpingTarget		需要与动画通知严格匹配
 	* @param Tolerance	        允许动画通知窗口之间的公差, 小于此值即忽略不计
 	* @param AnimWarpingScale   动画信息的缩放, 如果是0代表使用线性位移
 	* @param bExcludeEndAnimMotion 排除末尾的动画位移 
-	* 
+	* @param bTargetBasedOnFoot 位置是基于脚底还是胶囊体中心
 	*/
 	UFUNCTION(BlueprintCallable, Category="RootMotionSource", meta = (AdvancedDisplay = "7"))
 	static bool ApplyRootMotionSource_AnimationWarping(UCharacterMovementComponent* MovementComponent,
 	                                                   USkeletalMeshComponent* Mesh, UAnimSequence* DataAnimation,
-	                                                   TMap<FName, FVector> WarpingTarget, float TimeScale = 1,
+	                                                   TMap<FName, FVector> WarpingTarget,
+	                                                   bool bTargetBasedOnFoot = true, float TimeScale = 1,
 	                                                   float Tolerance = 0.01, float AnimWarpingScale = 1.0,
 	                                                   bool bExcludeEndAnimMotion = false,
 	                                                   ERootMotionSourceAnimWarpingAxis WarpingAxis =
@@ -207,13 +212,12 @@ public:
 	static void FiltAnimCurveOffsetAxisData(FVector& AnimOffset, ERootMotionSourceAnimWarpingAxis Axis);
 
 
-
 	/*
 	 * 根据时间获取正在运行的RMS的实时位置
 	 */
 	UFUNCTION(BlueprintCallable, Category="RootMotionSource", BlueprintPure)
 	static bool GetRootMotionSourceLocation_Runtime(UCharacterMovementComponent* MovementComponent, FName InstanceName,
-	                                               float Time, FVector& OutLocation);
+	                                                float Time, FVector& OutLocation);
 	/**
 	* 根据时间获取MoveTo的位置
 	* <位置是角色中心>

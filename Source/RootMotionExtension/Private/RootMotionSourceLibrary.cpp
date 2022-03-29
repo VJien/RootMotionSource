@@ -265,7 +265,7 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_SimpleAnimation(UCharacterM
 bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationAdjustment(
 	UCharacterMovementComponent* MovementComponent, USkeletalMeshComponent* Mesh, UAnimSequence* DataAnimation,
 	FName InstanceName, int32 Priority, FVector TargetLocation,
-	bool bLocalTarget, bool bUseCustomDuration, float CustomDuration, float AnimWarpingScale,
+	bool bLocalTarget, bool bTargetBasedOnFoot, bool bUseCustomDuration, float CustomDuration, float AnimWarpingScale,
 	ERootMotionAnimWarpingType WarpingType, ERootMotionSourceAnimWarpingAxis WarpingAxis)
 {
 	if (!MovementComponent || !DataAnimation || !Mesh || (bUseCustomDuration && CustomDuration <= 0))
@@ -284,10 +284,15 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationAdjustment(
 	int32 NumFrame = DataAnimation->GetNumberOfSampledKeys();
 	const float FrameTime = DataAnimation->GetPlayLength() / NumFrame;
 	//获取本地偏移
-	FVector LocationOffset = bLocalTarget
-		                         ? TargetLocation
-		                         : UKismetMathLibrary::InverseTransformLocation(
-			                         Character->GetActorTransform(), TargetLocation) + FVector(0, 0, HalfHeight);
+	FVector LocationOffset = FVector::ZeroVector;
+	if (bLocalTarget)
+	{
+		LocationOffset = TargetLocation + (bTargetBasedOnFoot ? FVector(0, 0, HalfHeight) : FVector::ZeroVector);
+	}
+	else
+	{
+		LocationOffset = UKismetMathLibrary::InverseTransformLocation(Character->GetActorTransform(), TargetLocation) + (bTargetBasedOnFoot ? FVector(0, 0, HalfHeight) : FVector::ZeroVector);
+	}
 	//开始位置
 	FVector StartLocation = Character->GetActorLocation();
 	//模型与角色的相对变换矩阵,我们只需要Rotation
@@ -384,7 +389,7 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationAdjustment(
 bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationAdjustmentByFrame(
 	UCharacterMovementComponent* MovementComponent, USkeletalMeshComponent* Mesh, UAnimSequence* DataAnimation,
 	FName InstanceName, int32 Priority, FVector TargetLocation,
-	bool bLocalTarget, int32 FromFrame, int32 TargetFram, float TimeScale, float AnimWarpingScale,
+	bool bLocalTarget,bool bTargetBasedOnFoot, int32 FromFrame, int32 TargetFram, float TimeScale, float AnimWarpingScale,
 	ERootMotionAnimWarpingType WarpingType, ERootMotionSourceAnimWarpingAxis WarpingAxis)
 {
 	if (!MovementComponent || !DataAnimation || !Mesh || FromFrame < 0 || (TargetFram > 0 && FromFrame > TargetFram))
@@ -396,7 +401,7 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationAdjustmentByFrame(
 	if (FromFrame == 0 && (TargetFram <= 0 || TargetFram == NumFrame))
 	{
 		return ApplyRootMotionSource_AnimationAdjustment(MovementComponent, Mesh, DataAnimation, InstanceName, Priority,
-		                                                 TargetLocation, bLocalTarget, true,
+		                                                 TargetLocation, bLocalTarget, bTargetBasedOnFoot,true,
 		                                                 DataAnimation->GetPlayLength() * TimeScale, AnimWarpingScale,
 		                                                 WarpingType, WarpingAxis);
 	}
@@ -414,7 +419,7 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationAdjustmentByFrame(
 		const float StartTime = FromFrame * FrameTime;
 		const float EndTime = TargetFram * FrameTime;
 		return ApplyRootMotionSource_AnimationAdjustmentByTime(MovementComponent, Mesh, DataAnimation, InstanceName,
-		                                                       Priority, TargetLocation, bLocalTarget, StartTime,
+		                                                       Priority, TargetLocation, bLocalTarget,bTargetBasedOnFoot, StartTime,
 		                                                       EndTime, TimeScale, AnimWarpingScale, WarpingType,
 		                                                       WarpingAxis);
 		return true;
@@ -424,7 +429,7 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationAdjustmentByFrame(
 bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationAdjustmentByTime(
 	UCharacterMovementComponent* MovementComponent, USkeletalMeshComponent* Mesh, UAnimSequence* DataAnimation,
 	FName InstanceName, int32 Priority, FVector TargetLocation,
-	bool bLocalTarget, float FromTime, int32 TargetTime, float TimeScale, float AnimWarpingScale,
+	bool bLocalTarget, bool bTargetBasedOnFoot, float FromTime, int32 TargetTime, float TimeScale, float AnimWarpingScale,
 	ERootMotionAnimWarpingType WarpingType, ERootMotionSourceAnimWarpingAxis WarpingAxis)
 {
 	if (!MovementComponent || !DataAnimation || !Mesh || FromTime < 0 || (TargetTime > 0 && FromTime > TargetTime))
@@ -438,7 +443,7 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationAdjustmentByTime(
 	if (FromTime == 0 && (TargetTime <= 0 || TargetTime == AnimLength))
 	{
 		return ApplyRootMotionSource_AnimationAdjustment(MovementComponent, Mesh, DataAnimation, InstanceName, Priority,
-		                                                 TargetLocation, bLocalTarget, true,
+		                                                 TargetLocation, bLocalTarget, bTargetBasedOnFoot, true,
 		                                                 DataAnimation->GetPlayLength() * TimeScale, AnimWarpingScale,
 		                                                 WarpingType, WarpingAxis);
 	}
@@ -453,10 +458,17 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationAdjustmentByTime(
 
 
 		//获取本地偏移
-		FVector LocationOffset = bLocalTarget
-			                         ? TargetLocation
-			                         : UKismetMathLibrary::InverseTransformLocation(
-				                         Character->GetActorTransform(), TargetLocation) + FVector(0, 0, HalfHeight);
+		FVector LocationOffset = FVector::ZeroVector;
+		if (bLocalTarget)
+		{
+			LocationOffset = TargetLocation + (bTargetBasedOnFoot ? FVector(0, 0, HalfHeight) : FVector::ZeroVector);
+		}
+		else
+		{
+			LocationOffset = UKismetMathLibrary::InverseTransformLocation(Character->GetActorTransform(), TargetLocation) + (bTargetBasedOnFoot ? FVector(0, 0, HalfHeight) : FVector::ZeroVector);
+		}
+
+		
 		//开始位置
 		FVector StartLocation = Character->GetActorLocation();
 		//模型与角色的相对变换矩阵,我们只需要Rotation
@@ -553,7 +565,7 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationAdjustmentByTime(
 
 bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationWarping(
 	UCharacterMovementComponent* MovementComponent, USkeletalMeshComponent* Mesh, UAnimSequence* DataAnimation,
-	TMap<FName, FVector> WarpingTarget, float TimeScale,
+	TMap<FName, FVector> WarpingTarget,  bool bTargetBasedOnFoot, float TimeScale,
 	float Tolerance, float AnimWarpingMulti, bool bExcludeEndAnimMotion, ERootMotionSourceAnimWarpingAxis WarpingAxis)
 {
 	if (!MovementComponent || !DataAnimation || !Mesh || WarpingTarget.Num() == 0 || TimeScale <= 0)
@@ -593,6 +605,10 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationWarping(
 			if (Target)
 			{
 				TriggerData.Target = *Target;
+				if (bTargetBasedOnFoot)
+				{
+					TriggerData.Target += HalfHeightVec;
+				}
 				TriggerData.bHasTarget = true;
 			}
 			TriggerDatas.Emplace(TriggerData);
@@ -734,9 +750,7 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationWarping(
 	FTransform TotalAnimRM = DataAnimation->ExtractRootMotionFromRange(0, AnimLength);
 	TotalAnimRM = TotalAnimRM * Mesh2Char;
 
-
-	//最终的目标是胶囊体中心, 所以要加上半高
-	WorldTarget += HalfHeightVec;
+	
 
 	if (CVarRMS_Debug.GetValueOnGameThread() == 1)
 	{
@@ -796,8 +810,11 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationWarping(
 				const auto target = WarpingTarget.Find(TrigData.WindowData.AnimNotify->RootMotionSourceInstance);
 				if (target)
 				{
-					//把目标处理一下半高, 基于脚底计算, 所以要加上半高
-					CurrTargetWS = *target + HalfHeightVec;
+					CurrTargetWS = *target;
+					if (bTargetBasedOnFoot)
+					{
+						CurrTargetWS += HalfHeightVec;
+					}
 					LocalOffset = UKismetMathLibrary::InverseTransformLocation(
 						Character->GetActorTransform(), CurrTargetWS);
 					bHasWarpingTarget = true;
@@ -831,12 +848,14 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationWarping(
 		FVector FinalLinearOffset = (WorldTarget - StartLocation) * Fraction;
 		//todo 这里有个坑, 曲线信息是start到target的朝向空间的, 即X的方向是target-start的向量朝向; 所以需要转换成相对空间
 		FVector Offset_LinearBase = LastTargetWS + WindowLinearOffset - (StartLocation + FinalLinearOffset);
-		ConvWorldOffsetToRmsSpace(Offset_LinearBase, StartLocation - HalfHeightVec, WorldTarget);
+		FVector OffsetWS = Offset_LinearBase;
+		ConvWorldOffsetToRmsSpace(Offset_LinearBase, StartLocation, WorldTarget);
 
 		FVector WindowAnimLinearOffset = (CurrTargetAnimRM.GetLocation() - LastTargetAnimRM.GetLocation()) *
 			WindowFraction;
 		FVector Offset_Anim = CurrFrameAnimRM.GetLocation() - (LastTargetAnimRM.GetLocation() + WindowAnimLinearOffset);
-		ConvWorldOffsetToRmsSpace(Offset_Anim, StartLocation - HalfHeightVec, WorldTarget);
+		OffsetWS += Offset_Anim;
+		ConvWorldOffsetToRmsSpace(Offset_Anim, StartLocation, WorldTarget);
 
 		//计算目标线性位移与动画RM线性位移的比值
 		const float WarpRatio = FMath::IsNearlyZero(WindowAnimLinearOffset.Size(), Tolerance)
@@ -845,7 +864,7 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationWarping(
 		Offset_Anim *= WarpRatio * AnimWarpingMulti;
 		FiltAnimCurveOffsetAxisData(Offset_Anim, WarpingAxis);
 		CurveOffset = Offset_LinearBase + Offset_Anim;
-
+		
 
 		CurveX.AddKey(TimeScaled / Duration, CurveOffset.X);
 		CurveY.AddKey(TimeScaled / Duration, CurveOffset.Y);
@@ -869,16 +888,19 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationWarping(
 			UKismetSystemLibrary::DrawDebugSphere(
 				Mesh, StartLocation + FinalLinearOffset -
 				FVector(0, 0, HalfHeight), 5.0, 4, FColor::Green, 5.0);
+			FRotator FacingRot = (WorldTarget - StartLocation).Rotation();
+			FacingRot.Pitch = 0;
 			//当前窗口的线性位置
-			UKismetSystemLibrary::DrawDebugSphere(Mesh, LastTargetWS + WindowLinearOffset - FVector(0, 0, HalfHeight),
+			UKismetSystemLibrary::DrawDebugSphere(Mesh, StartLocation + FinalLinearOffset  + OffsetWS - FVector(0, 0, HalfHeight),
 			                                      5.0, 4, FColor::Blue, 5.0);
+		
 		}
 		LastTime = CurrentTime;
 	}
 	OffsetCV->FloatCurves[0] = CurveX;
 	OffsetCV->FloatCurves[1] = CurveY;
 	OffsetCV->FloatCurves[2] = CurveZ;
-
+	
 
 	FRMS_MoveTo setting;
 
