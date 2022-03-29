@@ -69,26 +69,6 @@ struct FRootMotionSourceSetting
 {
 	GENERATED_BODY()
 public:
-	// FRootMotionSourceSetting()
-	// {
-	// }
-	// FRootMotionSourceSetting(FRootMotionSourceSetting InData): AccumulateMod(
-	// 		InData.AccumulateMod),VelocityOnFinishMode(InData.VelocityOnFinishMode),FinishSetVelocity(InData.FinishSetVelocity),FinishClampVelocity(InData.FinishClampVelocity),bForce(InData.bForce)
-	// {}
-	//
-	// FRootMotionSourceSetting(ERootMotionAccumulateMode InAccumulateMod, EFinishVelocityMode InVelocityOnFinishMode,
-	//                          FVector InFinishSetVelocity, float InFinishClampVelocity, bool bInForce): AccumulateMod(
-	// 	InAccumulateMod),VelocityOnFinishMode(InVelocityOnFinishMode),FinishSetVelocity(InFinishSetVelocity),FinishClampVelocity(InFinishClampVelocity),bForce(bInForce)
-	// {
-	// }
-
-	// void operator=(const FRootMotionSourceSetting& other)
-	// {
-	// 	AccumulateMod = other.AccumulateMod;
-	// }
-	
-	
-    static const FRootMotionSourceSetting DefaultRootMotionSourceSetting;
 	
 	UPROPERTY(BlueprintReadWrite)
 	ERootMotionAccumulateMode AccumulateMod = ERootMotionAccumulateMode::Override;
@@ -107,7 +87,6 @@ struct FRootMotionSourceMoveSetting : public FRootMotionSourceSetting
 {
 	GENERATED_BODY()
 public:
-	static const FRootMotionSourceMoveSetting DefaultRootMotionSourceMoveSetting;
 	
 	UPROPERTY(BlueprintReadWrite)
 	bool bRestrictSpeedToExpected = false;
@@ -120,7 +99,6 @@ struct FRootMotionSourceJumpSetting : public FRootMotionSourceSetting
 {
 	GENERATED_BODY()
 public:
-	static const FRootMotionSourceJumpSetting DefaultRootMotionSourceJumpSetting;
 	
 	UPROPERTY(BlueprintReadWrite)
 	float MinimumLandedTriggerTime = 0;

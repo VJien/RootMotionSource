@@ -3,6 +3,4 @@
 
 #include "RootMotionSourceTypes.h"
 
-const FRootMotionSourceSetting FRootMotionSourceSetting::DefaultRootMotionSourceSetting = FRootMotionSourceSetting();
-const FRootMotionSourceMoveSetting FRootMotionSourceMoveSetting::DefaultRootMotionSourceMoveSetting = FRootMotionSourceMoveSetting();
-const FRootMotionSourceJumpSetting FRootMotionSourceJumpSetting::DefaultRootMotionSourceJumpSetting = FRootMotionSourceJumpSetting();
+

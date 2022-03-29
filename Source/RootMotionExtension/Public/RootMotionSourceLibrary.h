@@ -32,8 +32,7 @@ public:
 	                                               FVector StartLocation, FVector TargetLocation, float Duration,
 	                                               int32 Priority,
 	                                               UCurveVector* PathOffsetCurve = nullptr,
-	                                               FRootMotionSourceMoveSetting Setting =
-		                                               FRootMotionSourceMoveSetting::DefaultRootMotionSourceMoveSetting);
+	                                               FRootMotionSourceMoveSetting Setting ={});
 	//通过高度和距离适配一个抛物线跳跃运动
 	UFUNCTION(BlueprintCallable, Category="RootMotionSource",
 		meta = (AdvancedDisplay = "7", AutoCreateRefTerm = "Setting", CPP_Default_Setting))
@@ -42,12 +41,11 @@ public:
 	                                             int32 Priority,
 	                                             UCurveVector* PathOffsetCurve = nullptr,
 	                                             UCurveFloat* TimeMappingCurve = nullptr,
-	                                             FRootMotionSourceJumpSetting Setting =
-		                                             FRootMotionSourceJumpSetting::DefaultRootMotionSourceJumpSetting);
+	                                             FRootMotionSourceJumpSetting Setting = {});
 	/**
 	* 移动到一个动态目标, 需要通过UpdateDynamicMoveToTarget设置目标
-	* @param Setting.StartLocation      角色会基于此开始移动,所以请确保是Actor当前的Location
-	* @param Setting.TargetLocation		参考StartLocation的目标位置(要考虑HalfHeight)
+	* @param StartLocation      角色会基于此开始移动,所以请确保是Actor当前的Location
+	* @param TargetLocation		参考StartLocation的目标位置(要考虑HalfHeight)
 	* 
 	*/
 	UFUNCTION(BlueprintCallable, Category="RootMotionSource",
@@ -57,8 +55,7 @@ public:
 	                                                      FVector TargetLocation, float Duration, int32 Priority,
 	                                                      UCurveVector* PathOffsetCurve = nullptr,
 	                                                      UCurveFloat* TimeMappingCurve = nullptr,
-	                                                      FRootMotionSourceMoveSetting Setting =
-		                                                      FRootMotionSourceMoveSetting::DefaultRootMotionSourceMoveSetting);
+	                                                      FRootMotionSourceMoveSetting Setting ={});
 
 	/**
 	* 抛物线的形式移动到一个点, 通过一个曲线来设定运动轨迹
@@ -75,7 +72,7 @@ public:
 	                                                        float Duration,
 	                                                        int32 Priority,
 	                                                        UCurveFloat* ParabolaCurve = nullptr,
-	                                                        int32 Segment = 8,FRootMotionSourceMoveSetting Setting = FRootMotionSourceMoveSetting::DefaultRootMotionSourceMoveSetting);
+	                                                        int32 Segment = 8,FRootMotionSourceMoveSetting Setting = {});
 
 #pragma region Animation
 	/**
