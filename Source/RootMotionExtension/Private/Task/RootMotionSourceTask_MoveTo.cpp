@@ -5,15 +5,24 @@
 
 #include "RootMotionSourceComponent.h"
 
-URootMotionSourceTask_MoveTo* URootMotionSourceTask_MoveTo::RootMotionSourceTask_MoveTo(URootMotionSourceComponent* RootMotionComponent,  FRMS_MoveTo Setting)
+URootMotionSourceTask_MoveTo* URootMotionSourceTask_MoveTo::RootMotionSourceTask_MoveTo(URootMotionSourceComponent* RootMotionComponent, FName InstanceName,
+												   FVector StartLocation, FVector TargetLocation, float Duration,
+												   int32 Priority,
+												   FRootMotionSourceMoveSetting Setting,
+												   UCurveVector* PathOffsetCurve)
 {
 	if (!RootMotionComponent->GetMovementComponent())
 	{
 		return nullptr;
 	}
 
-	URootMotionSourceTask_MoveTo* Task = NewRootMotionSourceTask<URootMotionSourceTask_MoveTo>(RootMotionComponent,Setting.InstanceName,Setting.Priority);
-	Task->SourceSetting = Setting;
+	URootMotionSourceTask_MoveTo* Task = NewRootMotionSourceTask<URootMotionSourceTask_MoveTo>(RootMotionComponent,InstanceName,Priority);
+	Task->StartLocation = StartLocation;
+	Task->TargetLocation = TargetLocation;
+	Task->Duration = Duration;
+	Task->Priority = Priority;
+	Task->PathOffsetCurve = PathOffsetCurve;
+	Task->Setting = Setting;
 	Task->RootMotionComponent = RootMotionComponent;
 	Task->ID = RootMotionComponent->TryActivateTask(Task);
 	RootMotionComponent->OnTaskEnd.AddDynamic(Task, &URootMotionSourceTask_MoveTo::OnTaskFinished);
@@ -51,11 +60,11 @@ void URootMotionSourceTask_MoveTo::OnTaskFinished_Implementation(URootMotionSour
 	}
 	if (bSuccess)
 	{
-		OnSuccess.Broadcast(SourceSetting);
+		OnSuccess.Broadcast(this);
 	}
 	else
 	{
-		OnFail.Broadcast(SourceSetting);
+		OnFail.Broadcast(this);
 	}
 	
 	EndTask();

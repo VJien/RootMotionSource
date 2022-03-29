@@ -6,7 +6,7 @@
 #include "GameplayTask.h"
 #include "RootMotionSourceComponent.h"
 #include "RootMotionSourceTask_Base.generated.h"
-
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRMSDlg, URootMotionSourceTask_Base*, Object);
 
 class URootMotionSourceComponent;
 UCLASS()

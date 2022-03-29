@@ -6,7 +6,7 @@
 #include "RootMotionSourceLibrary.h"
 #include "RootMotionSourceTask_Base.h"
 #include "RootMotionSourceTask_MoveTo.generated.h"
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMoveToDlg, FRMS_MoveTo, SourceSetting);
+
 
 class URootMotionSourceComponent;
 UCLASS()
@@ -15,7 +15,11 @@ class ROOTMOTIONEXTENSION_API URootMotionSourceTask_MoveTo : public URootMotionS
 	GENERATED_BODY()
 public:
 	UFUNCTION(BlueprintCallable, Category=RootMotionSource, meta = (BlueprintInternalUseOnly = "TRUE"))
-	static URootMotionSourceTask_MoveTo* RootMotionSourceTask_MoveTo(URootMotionSourceComponent* RootMotionComponent, FRMS_MoveTo Setting);
+	static URootMotionSourceTask_MoveTo* RootMotionSourceTask_MoveTo(URootMotionSourceComponent* RootMotionComponent,FName RmsInstanceName,
+												   FVector StartLocation, FVector TargetLocation, float Duration,
+												   int32 Priority,
+												   FRootMotionSourceMoveSetting Setting,
+												   UCurveVector* PathOffsetCurve = nullptr);
 
 	
 	virtual void Activate() override;
@@ -28,13 +32,23 @@ public:
 
 	
 	UPROPERTY(BlueprintCallable, BlueprintAssignable)
-	FMoveToDlg OnSuccess;
+	FRMSDlg OnSuccess;
 	UPROPERTY(BlueprintCallable, BlueprintAssignable)
-	FMoveToDlg OnFail;
+	FRMSDlg OnFail;
     	
 	UPROPERTY()
 	TWeakObjectPtr<UCharacterMovementComponent> MovementComp = nullptr;
-	UPROPERTY()
-	FRMS_MoveTo SourceSetting;
+	UPROPERTY(BlueprintReadOnly)
+	FVector StartLocation;
+	UPROPERTY(BlueprintReadOnly)
+	FVector TargetLocation;
+	UPROPERTY(BlueprintReadOnly)
+	float Duration;
+	UPROPERTY(BlueprintReadOnly)
+	int32 Priority;
+	UPROPERTY(BlueprintReadOnly)
+	UCurveVector* PathOffsetCurve = nullptr;
+	UPROPERTY(BlueprintReadOnly)
+	FRootMotionSourceMoveSetting Setting;
 
 };

@@ -73,12 +73,13 @@ int32 URootMotionSourceComponent::TryActivateTask(URootMotionSourceTask_Base* Ta
 			OnTaskEnd.Broadcast(MoveTo,false);
 			return -1;
 		}
-		if (bListenTaskEnd && !MoveTo->SourceSetting.bForce && URootMotionSourceLibrary::IsRootMotionSourceValid(MoveTo->RootMotionComponent->GetMovementComponent(), MoveTo->SourceSetting.InstanceName))
+		if (bListenTaskEnd && !MoveTo->Setting.bForce && URootMotionSourceLibrary::IsRootMotionSourceValid(MoveTo->RootMotionComponent->GetMovementComponent(), MoveTo->GetInstanceName()))
 		{
 			OnTaskEnd.Broadcast(MoveTo,false);
 			return -1;
 		}
-		int32 ID = URootMotionSourceLibrary::ApplyRootMotionSource_MoveToForce(MoveTo->RootMotionComponent->GetMovementComponent(), MoveTo->SourceSetting);
+		int32 ID = URootMotionSourceLibrary::ApplyRootMotionSource_MoveToForce(MoveTo->RootMotionComponent->GetMovementComponent(), MoveTo->GetInstanceName(), MoveTo->StartLocation,MoveTo->TargetLocation,MoveTo->Duration,
+			MoveTo->Priority,MoveTo->Setting,MoveTo->PathOffsetCurve);
 		MoveTo->Activate();
 		if (bListenTaskEnd)
 		{
