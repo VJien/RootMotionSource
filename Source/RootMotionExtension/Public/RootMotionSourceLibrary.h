@@ -9,7 +9,6 @@
 #include "RootMotionSourceLibrary.generated.h"
 
 
-
 class URootMotionSourceComponent;
 class UCurveVector;
 enum class ERootMotionAccumulateMode : uint8;
@@ -21,8 +20,6 @@ class ROOTMOTIONEXTENSION_API URootMotionSourceLibrary : public UBlueprintFuncti
 {
 	GENERATED_BODY()
 public:
-	
-	
 	/**
 	* 移动到一个点
 	* @param StartLocation      角色会基于此开始移动,所以请确保是Actor当前的Location
@@ -30,21 +27,23 @@ public:
 	* 
 	*/
 	UFUNCTION(BlueprintCallable, Category="RootMotionSource",
-		meta = (AdvancedDisplay = "6", AutoCreateRefTerm = "Setting"))
+		meta = (AdvancedDisplay = "6", AutoCreateRefTerm = "Setting", CPP_Default_Setting))
 	static int32 ApplyRootMotionSource_MoveToForce(UCharacterMovementComponent* MovementComponent, FName InstanceName,
 	                                               FVector StartLocation, FVector TargetLocation, float Duration,
 	                                               int32 Priority,
-	                                               FRootMotionSourceMoveSetting Setting,
-	                                               UCurveVector* PathOffsetCurve = nullptr);
+	                                               UCurveVector* PathOffsetCurve = nullptr,
+	                                               FRootMotionSourceMoveSetting Setting =
+		                                               FRootMotionSourceMoveSetting::DefaultRootMotionSourceMoveSetting);
 	//通过高度和距离适配一个抛物线跳跃运动
 	UFUNCTION(BlueprintCallable, Category="RootMotionSource",
-		meta = (AdvancedDisplay = "7", AutoCreateRefTerm = "Setting"))
+		meta = (AdvancedDisplay = "7", AutoCreateRefTerm = "Setting", CPP_Default_Setting))
 	static int32 ApplyRootMotionSource_JumpForce(UCharacterMovementComponent* MovementComponent, FName InstanceName,
 	                                             FRotator Rotation, float Duration, float Distance, float Height,
 	                                             int32 Priority,
-	                                             FRootMotionSourceJumpSetting Setting,
 	                                             UCurveVector* PathOffsetCurve = nullptr,
-	                                             UCurveFloat* TimeMappingCurve = nullptr);
+	                                             UCurveFloat* TimeMappingCurve = nullptr,
+	                                             FRootMotionSourceJumpSetting Setting =
+		                                             FRootMotionSourceJumpSetting::DefaultRootMotionSourceJumpSetting);
 	/**
 	* 移动到一个动态目标, 需要通过UpdateDynamicMoveToTarget设置目标
 	* @param Setting.StartLocation      角色会基于此开始移动,所以请确保是Actor当前的Location
@@ -52,30 +51,31 @@ public:
 	* 
 	*/
 	UFUNCTION(BlueprintCallable, Category="RootMotionSource",
-		meta = (AdvancedDisplay = "6", AutoCreateRefTerm = "Setting"))
+		meta = (AdvancedDisplay = "6", AutoCreateRefTerm = "Setting", CPP_Default_Setting))
 	static int32 ApplyRootMotionSource_DynamicMoveToForce(UCharacterMovementComponent* MovementComponent,
 	                                                      FName InstanceName, FVector StartLocation,
 	                                                      FVector TargetLocation, float Duration, int32 Priority,
-														  FRootMotionSourceMoveSetting Setting,
 	                                                      UCurveVector* PathOffsetCurve = nullptr,
-	                                                      UCurveFloat* TimeMappingCurve = nullptr);
+	                                                      UCurveFloat* TimeMappingCurve = nullptr,
+	                                                      FRootMotionSourceMoveSetting Setting =
+		                                                      FRootMotionSourceMoveSetting::DefaultRootMotionSourceMoveSetting);
 
 	/**
 	* 抛物线的形式移动到一个点, 通过一个曲线来设定运动轨迹
-	* @param Setting.StartLocation      角色会基于此开始移动,所以请确保是Actor当前的Location
-	* @param Setting.TargetLocation		参考StartLocation的目标位置(要考虑HalfHeight)
+	* @param StartLocation      角色会基于此开始移动,所以请确保是Actor当前的Location
+	* @param TargetLocation		参考StartLocation的目标位置(要考虑HalfHeight)
+	* @param UCurveFloat        抛物线形态曲线
 	* 
 	*/
 	UFUNCTION(BlueprintCallable, Category="RootMotionSource",
-		meta = (AdvancedDisplay = "6", AutoCreateRefTerm = "Setting"))
+		meta = (AdvancedDisplay = "6", AutoCreateRefTerm = "Setting", CPP_Default_Setting))
 	static int32 ApplyRootMotionSource_MoveToForce_Parabola(UCharacterMovementComponent* MovementComponent,
 	                                                        FName InstanceName,
 	                                                        FVector StartLocation, FVector TargetLocation,
 	                                                        float Duration,
 	                                                        int32 Priority,
-															FRootMotionSourceMoveSetting Setting,
 	                                                        UCurveFloat* ParabolaCurve = nullptr,
-	                                                        int32 Segment = 8);
+	                                                        int32 Segment = 8,FRootMotionSourceMoveSetting Setting = FRootMotionSourceMoveSetting::DefaultRootMotionSourceMoveSetting);
 
 #pragma region Animation
 	/**
@@ -92,7 +92,8 @@ public:
 	                                                  float StartTime = 0, float EndTime = -1, float TimeScale = 1);
 
 	/**
-	* 依据动画RootMotion数据适配目标点的运动,效果类似MotionWarping,  <位置偏移是基于脚底的>
+	* 依据动画RootMotion数据适配目标点的运动,效果类似MotionWarping,  
+	* <请确认位置是基于脚底还是角色中心>
 	* @param DataAnimation      参考RootMotion数据的动画, 该节点本身不负责播放动画
 	* @param bLocalTarget		如果为true,那么偏移信息是本地空间的
 	* @param bTargetBasedOnFoot 目标位置是基于脚底还是胶囊体中心

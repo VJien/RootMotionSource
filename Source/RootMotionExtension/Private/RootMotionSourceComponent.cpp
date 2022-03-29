@@ -79,7 +79,7 @@ int32 URootMotionSourceComponent::TryActivateTask(URootMotionSourceTask_Base* Ta
 			return -1;
 		}
 		int32 ID = URootMotionSourceLibrary::ApplyRootMotionSource_MoveToForce(MoveTo->RootMotionComponent->GetMovementComponent(), MoveTo->GetInstanceName(), MoveTo->StartLocation,MoveTo->TargetLocation,MoveTo->Duration,
-			MoveTo->Priority,MoveTo->Setting,MoveTo->PathOffsetCurve);
+			MoveTo->Priority,MoveTo->PathOffsetCurve,MoveTo->Setting);
 		MoveTo->Activate();
 		if (bListenTaskEnd)
 		{

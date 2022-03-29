@@ -15,11 +15,5 @@ class ROOTMOTIONEXTENSION_API UAnimNotifyState_RootMotionSource : public UAnimNo
 	GENERATED_BODY()
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FName RootMotionSourceInstance = NAME_None;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 Priority = 1;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bWarpLocation = true;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bWarpRotation = true;
+	FName RootMotionSourceTarget = NAME_None;
 };
