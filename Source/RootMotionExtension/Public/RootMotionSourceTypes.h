@@ -73,11 +73,11 @@ public:
 	UPROPERTY(BlueprintReadWrite)
 	ERootMotionAccumulateMode AccumulateMod = ERootMotionAccumulateMode::Override;
 	UPROPERTY(BlueprintReadWrite)
-	EFinishVelocityMode VelocityOnFinishMode = EFinishVelocityMode::MaintainLastRootMotionVelocity;
+	EFinishVelocityMode VelocityOnFinishMode = EFinishVelocityMode::ClampVelocity;
 	UPROPERTY(BlueprintReadWrite)
 	FVector FinishSetVelocity = FVector::ZeroVector;
 	UPROPERTY(BlueprintReadWrite)
-	float FinishClampVelocity = 0;
+	float FinishClampVelocity = 20;
 	UPROPERTY(BlueprintReadWrite)
 	bool bForce = false;
 };

@@ -212,13 +212,13 @@ public:
 	static void UpdateDynamicMoveDuration(UCharacterMovementComponent* MovementComponent, FName InstanceName,
 	                                      float NewDuration);
 	//获取RMS的时间信息
-	UFUNCTION(BlueprintCallable, Category="RootMotionSource", meta = (AdvancedDisplay = "7"))
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="RootMotionSource", meta = (AdvancedDisplay = "7"))
 	static void GetCurrentRootMotionSourceTime(UCharacterMovementComponent* MovementComponent, FName InstanceName,
-	                                           float& Time, float& Duration);
+	                                           float& CurrentTime, float& Duration);
 
-	UFUNCTION(BlueprintCallable, Category="RootMotionSource", meta = (AdvancedDisplay = "7"), BlueprintPure)
+	UFUNCTION(BlueprintCallable,  BlueprintPure,Category="RootMotionSource", meta = (AdvancedDisplay = "7"), BlueprintPure)
 	static bool IsRootMotionSourceValid(UCharacterMovementComponent* MovementComponent, FName InstanceName);
-	UFUNCTION(BlueprintCallable, Category="RootMotionSource", meta = (AdvancedDisplay = "7"), BlueprintPure)
+	UFUNCTION(BlueprintCallable,  BlueprintPure,Category="RootMotionSource", meta = (AdvancedDisplay = "7"), BlueprintPure)
 	static bool IsRootMotionSourceIdValid(UCharacterMovementComponent* MovementComponent, int32 ID);
 
 	static TSharedPtr<FRootMotionSource> GetRootMotionSource(UCharacterMovementComponent* MovementComponent,
@@ -243,7 +243,7 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category="RootMotionSource", BlueprintPure)
 	static bool GetRootMotionSourceLocation_Runtime(UCharacterMovementComponent* MovementComponent, FName InstanceName,
-	                                                float Time, FVector& OutLocation);
+	                                                float CurrentTime, FVector& OutLocation);
 	/**
 	* 根据时间获取MoveTo的位置
 	* <位置是角色中心>
@@ -252,7 +252,7 @@ public:
 	static bool GetRootMotionSourceLocation_MoveTo(FVector& OutLocation, UCharacterMovementComponent* MovementComponent,
 	                                               FVector StartLocation, FVector TargetLocation,
 	                                               float Duration,
-	                                               float Time, UCurveVector* PathOffsetCurve = nullptr);
+	                                               float CurrentTime, UCurveVector* PathOffsetCurve = nullptr);
 	/**
 	* 根据时间获取Jump的位置
 	* <位置是角色中心>
@@ -260,6 +260,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category="RootMotionSource", BlueprintPure)
 	static bool GetRootMotionSourceLocation_Jump(FVector& OutLocation, UCharacterMovementComponent* MovementComponent,
 	                                             FVector StartLocation, float Distance, float Height, FRotator Rotation,
-	                                             float Duration, float Time, UCurveVector* PathOffsetCurve = nullptr,
+	                                             float Duration, float CurrentTime, UCurveVector* PathOffsetCurve = nullptr,
 	                                             UCurveFloat* TimeMappingCurve = nullptr);
+	/**
+* 根据时间获取MoveTo的位置
+* <位置是角色中心>
+*/
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource", BlueprintPure)
+	static bool GetRootMotionSourceLocation_MoveToParabola(FVector& OutLocation, UCharacterMovementComponent* MovementComponent,
+												   FVector StartLocation, FVector TargetLocation,
+												   float Duration,
+												   float CurrentTime, UCurveFloat* ParabolaCurve = nullptr);
 };
