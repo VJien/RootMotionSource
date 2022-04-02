@@ -32,7 +32,8 @@ public:
 	                                               FVector StartLocation, FVector TargetLocation, float Duration,
 	                                               int32 Priority,
 	                                               UCurveVector* PathOffsetCurve = nullptr,
-	                                               FRootMotionSourceMoveSetting Setting ={});
+	                                               FRootMotionSourceMoveSetting Setting ={},
+	                                               float StartTime = 0);
 	//通过高度和距离适配一个抛物线跳跃运动
 	UFUNCTION(BlueprintCallable, Category="RootMotionSource",
 		meta = (AdvancedDisplay = "7", AutoCreateRefTerm = "Setting", CPP_Default_Setting))
@@ -41,7 +42,8 @@ public:
 	                                             int32 Priority,
 	                                             UCurveVector* PathOffsetCurve = nullptr,
 	                                             UCurveFloat* TimeMappingCurve = nullptr,
-	                                             FRootMotionSourceJumpSetting Setting = {});
+	                                             FRootMotionSourceJumpSetting Setting = {},
+	                                             float StartTime = 0);
 	/**
 	* 移动到一个动态目标, 需要通过UpdateDynamicMoveToTarget设置目标
 	* @param StartLocation      角色会基于此开始移动,所以请确保是Actor当前的Location
@@ -55,13 +57,15 @@ public:
 	                                                      FVector TargetLocation, float Duration, int32 Priority,
 	                                                      UCurveVector* PathOffsetCurve = nullptr,
 	                                                      UCurveFloat* TimeMappingCurve = nullptr,
-	                                                      FRootMotionSourceMoveSetting Setting ={});
+	                                                      FRootMotionSourceMoveSetting Setting ={},
+	                                                      float StartTime = 0);
 
 	/**
 	* 抛物线的形式移动到一个点, 通过一个曲线来设定运动轨迹
+	* ParabolaCurve X轴定义时间曲线, Z轴定义抛物线形态曲线
 	* @param StartLocation      角色会基于此开始移动,所以请确保是Actor当前的Location
 	* @param TargetLocation		参考StartLocation的目标位置(要考虑HalfHeight)
-	* @param UCurveFloat        抛物线形态曲线
+	* @param ParabolaCurve      X轴定义时间曲线, Z轴定义抛物线形态曲线
 	* 
 	*/
 	UFUNCTION(BlueprintCallable, Category="RootMotionSource",
@@ -71,8 +75,9 @@ public:
 	                                                        FVector StartLocation, FVector TargetLocation,
 	                                                        float Duration,
 	                                                        int32 Priority,
-	                                                        UCurveFloat* ParabolaCurve = nullptr,
-	                                                        int32 Segment = 8,FRootMotionSourceMoveSetting Setting = {});
+	                                                        UCurveVector* ParabolaCurve = nullptr,
+	                                                        int32 Segment = 8,FRootMotionSourceMoveSetting Setting = {},
+	                                                        float StartTime = 0);
 
 #pragma region Animation
 	/**
@@ -242,8 +247,10 @@ public:
 	 * 根据时间获取正在运行的RMS的实时位置
 	 */
 	UFUNCTION(BlueprintCallable, Category="RootMotionSource", BlueprintPure)
-	static bool GetRootMotionSourceLocation_Runtime(UCharacterMovementComponent* MovementComponent, FName InstanceName,
-	                                                float CurrentTime, FVector& OutLocation);
+	static bool GetRootMotionSourceLocation_Runtime(UCharacterMovementComponent* MovementComponent
+													, FName InstanceName
+													, float CurrentTime
+													, FVector& OutLocation);
 	/**
 	* 根据时间获取MoveTo的位置
 	* <位置是角色中心>
@@ -270,5 +277,5 @@ public:
 	static bool GetRootMotionSourceLocation_MoveToParabola(FVector& OutLocation, UCharacterMovementComponent* MovementComponent,
 												   FVector StartLocation, FVector TargetLocation,
 												   float Duration,
-												   float CurrentTime, UCurveFloat* ParabolaCurve = nullptr);
+												   float CurrentTime, UCurveVector* ParabolaCurve = nullptr);
 };

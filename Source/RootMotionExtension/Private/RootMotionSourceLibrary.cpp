@@ -41,7 +41,8 @@ int32 URootMotionSourceLibrary::ApplyRootMotionSource_MoveToForce(UCharacterMove
                                                                   float Duration,
                                                                   int32 Priority,
                                                                   UCurveVector* PathOffsetCurve,
-                                                                  FRootMotionSourceMoveSetting Setting)
+                                                                  FRootMotionSourceMoveSetting Setting,
+                                                                  float StartTime)
 {
 	if (!MovementComponent)
 	{
@@ -62,6 +63,7 @@ int32 URootMotionSourceLibrary::ApplyRootMotionSource_MoveToForce(UCharacterMove
 		VelocityOnFinishMode));
 	MoveToForce->FinishVelocityParams.SetVelocity = Setting.FinishSetVelocity;
 	MoveToForce->FinishVelocityParams.ClampVelocity = Setting.FinishClampVelocity;
+	MoveToForce->SetTime(StartTime);
 	return MovementComponent->ApplyRootMotionSource(MoveToForce);
 }
 
@@ -71,7 +73,8 @@ int32 URootMotionSourceLibrary::ApplyRootMotionSource_JumpForce(UCharacterMoveme
                                                                 float Height, int32 Priority,
                                                                 UCurveVector* PathOffsetCurve,
                                                                 UCurveFloat* TimeMappingCurve,
-                                                                FRootMotionSourceJumpSetting Setting)
+                                                                FRootMotionSourceJumpSetting Setting,
+																float StartTime)
 {
 	if (!MovementComponent)
 	{
@@ -92,6 +95,7 @@ int32 URootMotionSourceLibrary::ApplyRootMotionSource_JumpForce(UCharacterMoveme
 		VelocityOnFinishMode));
 	JumpForce->FinishVelocityParams.SetVelocity = Setting.FinishSetVelocity;
 	JumpForce->FinishVelocityParams.ClampVelocity = Setting.FinishClampVelocity;
+	JumpForce->SetTime(StartTime);
 	return MovementComponent->ApplyRootMotionSource(JumpForce);
 }
 
@@ -101,7 +105,8 @@ int32 URootMotionSourceLibrary::ApplyRootMotionSource_DynamicMoveToForce(UCharac
                                                                          int32 Priority,
                                                                          UCurveVector* PathOffsetCurve,
                                                                          UCurveFloat* TimeMappingCurve,
-                                                                         FRootMotionSourceMoveSetting Setting)
+                                                                         FRootMotionSourceMoveSetting Setting,
+                                                                         float StartTime)
 {
 	if (!MovementComponent)
 	{
@@ -125,24 +130,26 @@ int32 URootMotionSourceLibrary::ApplyRootMotionSource_DynamicMoveToForce(UCharac
 		VelocityOnFinishMode));
 	MoveToActorForce->FinishVelocityParams.SetVelocity = Setting.FinishSetVelocity;
 	MoveToActorForce->FinishVelocityParams.ClampVelocity = Setting.FinishClampVelocity;
-	return MovementComponent->ApplyRootMotionSource(MoveToActorForce);
+	MoveToActorForce->SetTime(StartTime);
+	return  MovementComponent->ApplyRootMotionSource(MoveToActorForce);
+	
 }
 
-int32 URootMotionSourceLibrary::ApplyRootMotionSource_MoveToForce_Parabola(
-	UCharacterMovementComponent* MovementComponent,
-	FName InstanceName,
-	FVector StartLocation, FVector TargetLocation,
-	float Duration,
-	int32 Priority,
-	UCurveFloat* ParabolaCurve,
-	int32 Segment,
-	FRootMotionSourceMoveSetting Setting)
+int32 URootMotionSourceLibrary::ApplyRootMotionSource_MoveToForce_Parabola(UCharacterMovementComponent* MovementComponent,
+                                                                           FName InstanceName,
+                                                                           FVector StartLocation, FVector TargetLocation,
+                                                                           float Duration,
+                                                                           int32 Priority,
+                                                                           UCurveVector* ParabolaCurve,
+                                                                           int32 Segment,
+                                                                           FRootMotionSourceMoveSetting Setting,
+                                                                           float StartTime)
 {
-	if (!MovementComponent)
+	if (!MovementComponent || Duration<=0)
 	{
 		return -1;
 	}
-	TSharedPtr<FRootMotionSource_MoveToForce> MoveToForce = MakeShared<FRootMotionSource_MoveToForce>();
+	TSharedPtr<FRootMotionSource_MoveToDynamicForce> MoveToForce = MakeShared<FRootMotionSource_MoveToDynamicForce>();
 	MoveToForce->InstanceName = InstanceName == NAME_None ? TEXT("ParabolaMoveTo") : InstanceName;
 	MoveToForce->AccumulateMode = Setting.AccumulateMod;
 	MoveToForce->Settings.SetFlag(
@@ -154,6 +161,7 @@ int32 URootMotionSourceLibrary::ApplyRootMotionSource_MoveToForce_Parabola(
 	MoveToForce->bRestrictSpeedToExpected = Setting.bRestrictSpeedToExpected;
 	FVector Target = TargetLocation;
 	UCurveVector* PathCurve = NewObject<UCurveVector>();
+	UCurveFloat* TimeCurve = NewObject<UCurveFloat>();
 	if (ParabolaCurve)
 	{
 		float OffsetZ = (TargetLocation - StartLocation).Z;
@@ -164,20 +172,22 @@ int32 URootMotionSourceLibrary::ApplyRootMotionSource_MoveToForce_Parabola(
 		for (int32 i = 0; i <= Segment; i++)
 		{
 			const float Fraction = static_cast<float>(i) / static_cast<float>(Segment);
-			const float Value = ParabolaCurve->GetFloatValue(Fraction);
-			ZCurve.AddKey(Fraction, OffsetZ * Value);
+			const FVector Value = ParabolaCurve->GetVectorValue(Fraction);
+			ZCurve.AddKey(Fraction, OffsetZ * Value.Z);
 		}
-
+		TimeCurve->FloatCurve = ParabolaCurve->FloatCurves[0];
 		PathCurve->FloatCurves[2] = ZCurve;
 	}
+	
 	MoveToForce->TargetLocation = Target;
 
-
+	MoveToForce->TimeMappingCurve = TimeCurve;
 	MoveToForce->PathOffsetCurve = PathCurve;
 	MoveToForce->FinishVelocityParams.Mode = static_cast<ERootMotionFinishVelocityMode>(static_cast<uint8>(Setting.
 		VelocityOnFinishMode));
 	MoveToForce->FinishVelocityParams.SetVelocity = Setting.FinishSetVelocity;
 	MoveToForce->FinishVelocityParams.ClampVelocity = Setting.FinishClampVelocity;
+	MoveToForce->SetTime(StartTime);
 	return MovementComponent->ApplyRootMotionSource(MoveToForce);
 }
 
@@ -1297,19 +1307,28 @@ bool URootMotionSourceLibrary::GetRootMotionSourceLocation_Runtime(UCharacterMov
 	{
 		return false;
 	}
-	if (auto RMS_MoveTo = StaticCastSharedPtr<FRootMotionSource_MoveToForce>(RMS))
+	
+	if (auto RMS_MoveToDy = StaticCastSharedPtr<FRootMotionSource_MoveToDynamicForce>(RMS))
 	{
-		const float Fraction = Time / RMS_MoveTo->GetDuration();
-		const FVector PathOffset = RMS_MoveTo->GetPathOffsetInWorldSpace(Fraction);
+		float Fraction = Time / RMS_MoveToDy->GetDuration();
+		if (RMS_MoveToDy->TimeMappingCurve)
+		{
+			Fraction = EvaluateFloatCurveAtFraction(*RMS_MoveToDy->TimeMappingCurve, Fraction);
+		}
+		const FVector PathOffset = RMS_MoveToDy->GetPathOffsetInWorldSpace(Fraction);
 		const FVector CurrentTargetLocation = FMath::Lerp<FVector, float>(
-			RMS_MoveTo->StartLocation, RMS_MoveTo->TargetLocation, Fraction);
+			RMS_MoveToDy->StartLocation, RMS_MoveToDy->TargetLocation, Fraction);
 		OutLocation = CurrentTargetLocation + PathOffset;
 		return true;
 	}
-	else if (auto RMS_MoveToDy = StaticCastSharedPtr<FRootMotionSource_MoveToDynamicForce>(RMS))
+	else if (auto RMS_MoveTo = StaticCastSharedPtr<FRootMotionSource_MoveToForce>(RMS))
 	{
 		const float Fraction = Time / RMS_MoveTo->GetDuration();
-		const FVector PathOffset = RMS_MoveTo->GetPathOffsetInWorldSpace(Fraction);
+		FVector PathOffset = FVector::ZeroVector;
+		if (RMS_MoveTo->PathOffsetCurve)
+		{
+			PathOffset = RMS_MoveTo->GetPathOffsetInWorldSpace(Fraction);
+		}
 		const FVector CurrentTargetLocation = FMath::Lerp<FVector, float>(
 			RMS_MoveTo->StartLocation, RMS_MoveTo->TargetLocation, Fraction);
 		OutLocation = CurrentTargetLocation + PathOffset;
@@ -1408,20 +1427,29 @@ bool URootMotionSourceLibrary::GetRootMotionSourceLocation_Jump(FVector& OutLoca
 	return true;
 }
 
-bool URootMotionSourceLibrary::GetRootMotionSourceLocation_MoveToParabola(FVector& OutLocation, UCharacterMovementComponent* MovementComponent, FVector StartLocation, FVector TargetLocation, float Duration, float CurrentTime, UCurveFloat* ParabolaCurve)
+bool URootMotionSourceLibrary::GetRootMotionSourceLocation_MoveToParabola(FVector& OutLocation
+																		, UCharacterMovementComponent* MovementComponent
+																		, FVector StartLocation
+																		, FVector TargetLocation
+																		, float Duration
+																		, float CurrentTime
+																		, UCurveVector* ParabolaCurve)
 {
 	if (!MovementComponent || Duration <= 0 || CurrentTime < 0 || CurrentTime > Duration)
 	{
 		return false;
 	}
-	const float Fraction = CurrentTime / Duration;
+	float Fraction = CurrentTime / Duration;
 	FVector CurrentTargetLocation = FMath::Lerp<FVector, float>(StartLocation, TargetLocation, Fraction);
 	
 	if (ParabolaCurve)
 	{
 		const float Z = (TargetLocation - StartLocation).Z;
-		const float CurveValue = EvaluateFloatCurveAtFraction(*ParabolaCurve, Fraction);
-		CurrentTargetLocation.Z = StartLocation.Z + CurveValue * Z;
+		UCurveFloat* TimeCurve = NewObject<UCurveFloat>();
+		TimeCurve->FloatCurve = ParabolaCurve->FloatCurves[0];
+		Fraction = EvaluateFloatCurveAtFraction(*TimeCurve, Fraction);
+		const FVector CurveValue = EvaluateVectorCurveAtFraction(*ParabolaCurve, Fraction);
+		CurrentTargetLocation.Z = StartLocation.Z + CurveValue.Z * Z;
 	}
 	OutLocation = CurrentTargetLocation;
 
