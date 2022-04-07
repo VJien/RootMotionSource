@@ -27,23 +27,25 @@ public:
 	* 
 	*/
 	UFUNCTION(BlueprintCallable, Category="RootMotionSource",
-		meta = (AdvancedDisplay = "6", AutoCreateRefTerm = "Setting", CPP_Default_Setting))
+		meta = (AdvancedDisplay = "6", AutoCreateRefTerm = "ExtraSetting", CPP_Default_ExtraSetting))
 	static int32 ApplyRootMotionSource_MoveToForce(UCharacterMovementComponent* MovementComponent, FName InstanceName,
 	                                               FVector StartLocation, FVector TargetLocation, float Duration,
 	                                               int32 Priority,
 	                                               UCurveVector* PathOffsetCurve = nullptr,
-	                                               FRootMotionSourceMoveSetting Setting ={},
-	                                               float StartTime = 0);
+	                                               float StartTime = 0,
+	                                               ERootMotionSourceApplyMode ApplyMode = ERootMotionSourceApplyMode::None,
+	                                               FRootMotionSourceMoveSetting ExtraSetting = {});
 	//通过高度和距离适配一个抛物线跳跃运动
 	UFUNCTION(BlueprintCallable, Category="RootMotionSource",
-		meta = (AdvancedDisplay = "7", AutoCreateRefTerm = "Setting", CPP_Default_Setting))
+		meta = (AdvancedDisplay = "7", AutoCreateRefTerm = "ExtraSetting", CPP_Default_ExtraSetting))
 	static int32 ApplyRootMotionSource_JumpForce(UCharacterMovementComponent* MovementComponent, FName InstanceName,
 	                                             FRotator Rotation, float Duration, float Distance, float Height,
 	                                             int32 Priority,
 	                                             UCurveVector* PathOffsetCurve = nullptr,
 	                                             UCurveFloat* TimeMappingCurve = nullptr,
-	                                             FRootMotionSourceJumpSetting Setting = {},
-	                                             float StartTime = 0);
+	                                             float StartTime = 0,
+	                                             ERootMotionSourceApplyMode ApplyMode = ERootMotionSourceApplyMode::None,
+	                                             FRootMotionSourceJumpSetting ExtraSetting = {});
 	/**
 	* 移动到一个动态目标, 需要通过UpdateDynamicMoveToTarget设置目标
 	* @param StartLocation      角色会基于此开始移动,所以请确保是Actor当前的Location
@@ -51,14 +53,15 @@ public:
 	* 
 	*/
 	UFUNCTION(BlueprintCallable, Category="RootMotionSource",
-		meta = (AdvancedDisplay = "6", AutoCreateRefTerm = "Setting", CPP_Default_Setting))
+		meta = (AdvancedDisplay = "6", AutoCreateRefTerm = "ExtraSetting", CPP_Default_ExtraSetting))
 	static int32 ApplyRootMotionSource_DynamicMoveToForce(UCharacterMovementComponent* MovementComponent,
 	                                                      FName InstanceName, FVector StartLocation,
 	                                                      FVector TargetLocation, float Duration, int32 Priority,
 	                                                      UCurveVector* PathOffsetCurve = nullptr,
 	                                                      UCurveFloat* TimeMappingCurve = nullptr,
-	                                                      FRootMotionSourceMoveSetting Setting ={},
-	                                                      float StartTime = 0);
+	                                                      float StartTime = 0,
+	                                                      ERootMotionSourceApplyMode ApplyMode = ERootMotionSourceApplyMode::None,
+	                                                      FRootMotionSourceMoveSetting ExtraSetting = {});
 
 	/**
 	* 抛物线的形式移动到一个点, 通过一个曲线来设定运动轨迹
@@ -69,15 +72,31 @@ public:
 	* 
 	*/
 	UFUNCTION(BlueprintCallable, Category="RootMotionSource",
-		meta = (AdvancedDisplay = "6", AutoCreateRefTerm = "Setting", CPP_Default_Setting))
+		meta = (AdvancedDisplay = "6", AutoCreateRefTerm = "ExtraSetting", CPP_Default_ExtraSetting))
 	static int32 ApplyRootMotionSource_MoveToForce_Parabola(UCharacterMovementComponent* MovementComponent,
 	                                                        FName InstanceName,
 	                                                        FVector StartLocation, FVector TargetLocation,
 	                                                        float Duration,
 	                                                        int32 Priority,
 	                                                        UCurveVector* ParabolaCurve = nullptr,
-	                                                        int32 Segment = 8,FRootMotionSourceMoveSetting Setting = {},
-	                                                        float StartTime = 0);
+	                                                        int32 Segment = 8,
+	                                                        float StartTime = 0,
+	                                                        ERootMotionSourceApplyMode ApplyMode = ERootMotionSourceApplyMode::None,
+	                                                        FRootMotionSourceMoveSetting ExtraSetting = {});
+
+
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource",
+		meta = (AdvancedDisplay = "6", AutoCreateRefTerm = "ExtraSetting", CPP_Default_ExtraSetting))
+	static int32 ApplyRootMotionSource_PathMoveToForce(UCharacterMovementComponent* MovementComponent,
+															FName InstanceName,
+															FVector StartLocation, TArray<FRootMotionSourcePathMoveToData> Path,
+															int32 Priority,
+															float StartTime = 0,
+															ERootMotionSourceApplyMode ApplyMode = ERootMotionSourceApplyMode::None,
+															FRootMotionSourceMoveSetting ExtraSetting = {});
+
+
+
 
 #pragma region Animation
 	/**
@@ -91,7 +110,7 @@ public:
 	static bool ApplyRootMotionSource_SimpleAnimation(UCharacterMovementComponent* MovementComponent,
 	                                                  USkeletalMeshComponent* Mesh, UAnimSequence* DataAnimation,
 	                                                  FName InstanceName, int32 Priority,
-	                                                  float StartTime = 0, float EndTime = -1, float TimeScale = 1);
+	                                                  float StartTime = 0, float EndTime = -1, float TimeScale = 1, ERootMotionSourceApplyMode ApplyMode = ERootMotionSourceApplyMode::None);
 
 	/**
 	* 依据动画RootMotion数据适配目标点的运动,效果类似MotionWarping,  
@@ -111,7 +130,7 @@ public:
 	                                                      ERootMotionAnimWarpingType WarpingType =
 		                                                      ERootMotionAnimWarpingType::BasedOnLength,
 	                                                      ERootMotionSourceAnimWarpingAxis WarpingAxis =
-		                                                      ERootMotionSourceAnimWarpingAxis::XYZ);
+		                                                      ERootMotionSourceAnimWarpingAxis::XYZ, ERootMotionSourceApplyMode ApplyMode = ERootMotionSourceApplyMode::None);
 	/**
 	* 基于ApplyRootMotionSource_AnimationAdjustment, 通过动画帧来决定播放时段,  <位置偏移是基于脚底的>
 	* @param DataAnimation      参考RootMotion数据的动画, 该节点本身不负责播放动画
@@ -130,7 +149,7 @@ public:
 	                                                             ERootMotionAnimWarpingType WarpingType =
 		                                                             ERootMotionAnimWarpingType::BasedOnLength,
 	                                                             ERootMotionSourceAnimWarpingAxis WarpingAxis =
-		                                                             ERootMotionSourceAnimWarpingAxis::XYZ);
+		                                                             ERootMotionSourceAnimWarpingAxis::XYZ, ERootMotionSourceApplyMode ApplyMode = ERootMotionSourceApplyMode::None);
 	/**
 	* 基于ApplyRootMotionSource_AnimationAdjustment, 通过动画时间来决定播放时段,  <位置偏移是基于脚底的>
 	* @param DataAnimation      参考RootMotion数据的动画, 该节点本身不负责播放动画
@@ -149,7 +168,7 @@ public:
 	                                                            ERootMotionAnimWarpingType WarpingType =
 		                                                            ERootMotionAnimWarpingType::BasedOnLength,
 	                                                            ERootMotionSourceAnimWarpingAxis WarpingAxis =
-		                                                            ERootMotionSourceAnimWarpingAxis::XYZ);
+		                                                            ERootMotionSourceAnimWarpingAxis::XYZ, ERootMotionSourceApplyMode ApplyMode = ERootMotionSourceApplyMode::None);
 
 	/**
 	* 需要配置动画通知窗口, 通过WarpingTarget配置对应窗口的目标点信息,做到分阶段的运动适配,类似MotionWarping
@@ -164,12 +183,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category="RootMotionSource", meta = (AdvancedDisplay = "4"))
 	static bool ApplyRootMotionSource_AnimationWarping(UCharacterMovementComponent* MovementComponent,
 	                                                   USkeletalMeshComponent* Mesh, UAnimSequence* DataAnimation,
-	                                                   TMap<FName, FVector> WarpingTarget,
+	                                                   TMap<FName, FVector> WarpingTarget, FName InstanceName,
+	                                                   int32 Priority,
 	                                                   bool bTargetBasedOnFoot = true, float TimeScale = 1,
 	                                                   float Tolerance = 0.01, float AnimWarpingScale = 1.0,
 	                                                   bool bExcludeEndAnimMotion = false,
 	                                                   ERootMotionSourceAnimWarpingAxis WarpingAxis =
-		                                                   ERootMotionSourceAnimWarpingAxis::XYZ);
+		                                                   ERootMotionSourceAnimWarpingAxis::XYZ, ERootMotionSourceApplyMode ApplyMode = ERootMotionSourceApplyMode::None);
 
 	static bool GetRootMotionSourceWindow(UAnimSequence* DataAnimation, FName InstanceName,
 	                                      FRootMotionSoueceWindowData& Window);
@@ -189,7 +209,7 @@ public:
 	                                                  UCurveFloat* StrengthOverTime, float Duration,
 	                                                  EFinishVelocityMode VelocityOnFinishMode,
 	                                                  FVector FinishSetVelocity, float FinishClampVelocity = 0,
-	                                                  bool bEnableGravity = false);
+	                                                  bool bEnableGravity = false, ERootMotionSourceApplyMode ApplyMode = ERootMotionSourceApplyMode::None);
 	//模拟范围力的RootMotion效果, 类似AddRadialForce
 	UFUNCTION(BlueprintCallable, Category="RootMotionSource", meta = (AdvancedDisplay = "7"))
 	static int32 ApplyRootMotionSource_RadialForece(UCharacterMovementComponent* MovementComponent, FName InstanceName,
@@ -200,7 +220,7 @@ public:
 	                                                UCurveFloat* StrengthOverTime, bool bIsPush, float Duration,
 	                                                bool bUseFixedWorldDirection, FRotator FixedWorldDirection,
 	                                                EFinishVelocityMode VelocityOnFinishMode,
-	                                                FVector FinishSetVelocity, float FinishClampVelocity = 0);
+	                                                FVector FinishSetVelocity, float FinishClampVelocity = 0, ERootMotionSourceApplyMode ApplyMode = ERootMotionSourceApplyMode::None);
 
 	//刷新动态目标的位置
 	UFUNCTION(BlueprintCallable, Category="RootMotionSource", meta = (AdvancedDisplay = "7"))
@@ -221,9 +241,9 @@ public:
 	static void GetCurrentRootMotionSourceTime(UCharacterMovementComponent* MovementComponent, FName InstanceName,
 	                                           float& CurrentTime, float& Duration);
 
-	UFUNCTION(BlueprintCallable,  BlueprintPure,Category="RootMotionSource", meta = (AdvancedDisplay = "7"), BlueprintPure)
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="RootMotionSource", meta = (AdvancedDisplay = "7"), BlueprintPure)
 	static bool IsRootMotionSourceValid(UCharacterMovementComponent* MovementComponent, FName InstanceName);
-	UFUNCTION(BlueprintCallable,  BlueprintPure,Category="RootMotionSource", meta = (AdvancedDisplay = "7"), BlueprintPure)
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="RootMotionSource", meta = (AdvancedDisplay = "7"), BlueprintPure)
 	static bool IsRootMotionSourceIdValid(UCharacterMovementComponent* MovementComponent, int32 ID);
 
 	static TSharedPtr<FRootMotionSource> GetRootMotionSource(UCharacterMovementComponent* MovementComponent,
@@ -242,15 +262,16 @@ public:
 
 	static void FiltAnimCurveOffsetAxisData(FVector& AnimOffset, ERootMotionSourceAnimWarpingAxis Axis);
 
-
+	static int32 ExcuteApplyMode(UCharacterMovementComponent* MovementComponent, FName PendingInstanceName, int32 PendingPriorioty, ERootMotionSourceApplyMode ApplyMode);
+	
 	/*
 	 * 根据时间获取正在运行的RMS的实时位置
 	 */
 	UFUNCTION(BlueprintCallable, Category="RootMotionSource", BlueprintPure)
 	static bool GetRootMotionSourceLocation_Runtime(UCharacterMovementComponent* MovementComponent
-													, FName InstanceName
-													, float CurrentTime
-													, FVector& OutLocation);
+	                                                , FName InstanceName
+	                                                , float CurrentTime
+	                                                , FVector& OutLocation);
 	/**
 	* 根据时间获取MoveTo的位置
 	* <位置是角色中心>
@@ -275,7 +296,7 @@ public:
 */
 	UFUNCTION(BlueprintCallable, Category="RootMotionSource", BlueprintPure)
 	static bool GetRootMotionSourceLocation_MoveToParabola(FVector& OutLocation, UCharacterMovementComponent* MovementComponent,
-												   FVector StartLocation, FVector TargetLocation,
-												   float Duration,
-												   float CurrentTime, UCurveVector* ParabolaCurve = nullptr);
+	                                                       FVector StartLocation, FVector TargetLocation,
+	                                                       float Duration,
+	                                                       float CurrentTime, UCurveVector* ParabolaCurve = nullptr);
 };

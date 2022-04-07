@@ -5,6 +5,7 @@
 
 #include "AnimNotifyState_RootMotionSource.h"
 #include "RootMotionSourceComponent.h"
+#include "RootMotionSourceGroupEx.h"
 #include "Components/CapsuleComponent.h"
 #include "Curves/CurveVector.h"
 #include "GameFramework/Character.h"
@@ -41,10 +42,16 @@ int32 URootMotionSourceLibrary::ApplyRootMotionSource_MoveToForce(UCharacterMove
                                                                   float Duration,
                                                                   int32 Priority,
                                                                   UCurveVector* PathOffsetCurve,
-                                                                  FRootMotionSourceMoveSetting Setting,
-                                                                  float StartTime)
+                                                                  float StartTime,
+                                                                  ERootMotionSourceApplyMode ApplyMode,
+                                                                  FRootMotionSourceMoveSetting Setting)
 {
 	if (!MovementComponent)
+	{
+		return -1;
+	}
+	const int32 NewPriority = ExcuteApplyMode(MovementComponent, InstanceName, Priority, ApplyMode);
+	if (NewPriority < 0)
 	{
 		return -1;
 	}
@@ -53,7 +60,7 @@ int32 URootMotionSourceLibrary::ApplyRootMotionSource_MoveToForce(UCharacterMove
 	MoveToForce->AccumulateMode = Setting.AccumulateMod;
 	MoveToForce->Settings.SetFlag(
 		static_cast<ERootMotionSourceSettingsFlags>(static_cast<uint8>(Setting.SourcesSetting)));
-	MoveToForce->Priority = Priority;
+	MoveToForce->Priority = NewPriority;
 	MoveToForce->TargetLocation = TargetLocation;
 	MoveToForce->StartLocation = StartLocation;
 	MoveToForce->Duration = Duration;
@@ -73,17 +80,23 @@ int32 URootMotionSourceLibrary::ApplyRootMotionSource_JumpForce(UCharacterMoveme
                                                                 float Height, int32 Priority,
                                                                 UCurveVector* PathOffsetCurve,
                                                                 UCurveFloat* TimeMappingCurve,
-                                                                FRootMotionSourceJumpSetting Setting,
-																float StartTime)
+                                                                float StartTime,
+                                                                ERootMotionSourceApplyMode ApplyMode,
+                                                                FRootMotionSourceJumpSetting Setting)
 {
 	if (!MovementComponent)
+	{
+		return -1;
+	}
+	const int32 NewPriority = ExcuteApplyMode(MovementComponent, InstanceName, Priority, ApplyMode);
+	if (NewPriority < 0)
 	{
 		return -1;
 	}
 	TSharedPtr<FRootMotionSource_JumpForce> JumpForce = MakeShared<FRootMotionSource_JumpForce>();
 	JumpForce->InstanceName = InstanceName == NAME_None ? TEXT("Jump") : InstanceName;
 	JumpForce->AccumulateMode = Setting.AccumulateMod;
-	JumpForce->Priority = Priority;
+	JumpForce->Priority = NewPriority;
 	JumpForce->Duration = Duration;
 	JumpForce->Rotation = Rotation;
 	JumpForce->Distance = Distance;
@@ -105,10 +118,16 @@ int32 URootMotionSourceLibrary::ApplyRootMotionSource_DynamicMoveToForce(UCharac
                                                                          int32 Priority,
                                                                          UCurveVector* PathOffsetCurve,
                                                                          UCurveFloat* TimeMappingCurve,
-                                                                         FRootMotionSourceMoveSetting Setting,
-                                                                         float StartTime)
+                                                                         float StartTime,
+                                                                         ERootMotionSourceApplyMode ApplyMode,
+                                                                         FRootMotionSourceMoveSetting Setting)
 {
 	if (!MovementComponent)
+	{
+		return -1;
+	}
+	const int32 NewPriority = ExcuteApplyMode(MovementComponent, InstanceName, Priority, ApplyMode);
+	if (NewPriority < 0)
 	{
 		return -1;
 	}
@@ -118,7 +137,7 @@ int32 URootMotionSourceLibrary::ApplyRootMotionSource_DynamicMoveToForce(UCharac
 	MoveToActorForce->AccumulateMode = Setting.AccumulateMod;
 	MoveToActorForce->Settings.SetFlag(
 		static_cast<ERootMotionSourceSettingsFlags>(static_cast<uint8>(Setting.SourcesSetting)));
-	MoveToActorForce->Priority = Priority;
+	MoveToActorForce->Priority = NewPriority;
 	MoveToActorForce->InitialTargetLocation = TargetLocation;
 	MoveToActorForce->TargetLocation = TargetLocation;
 	MoveToActorForce->StartLocation = StartLocation;
@@ -131,8 +150,7 @@ int32 URootMotionSourceLibrary::ApplyRootMotionSource_DynamicMoveToForce(UCharac
 	MoveToActorForce->FinishVelocityParams.SetVelocity = Setting.FinishSetVelocity;
 	MoveToActorForce->FinishVelocityParams.ClampVelocity = Setting.FinishClampVelocity;
 	MoveToActorForce->SetTime(StartTime);
-	return  MovementComponent->ApplyRootMotionSource(MoveToActorForce);
-	
+	return MovementComponent->ApplyRootMotionSource(MoveToActorForce);
 }
 
 int32 URootMotionSourceLibrary::ApplyRootMotionSource_MoveToForce_Parabola(UCharacterMovementComponent* MovementComponent,
@@ -142,10 +160,16 @@ int32 URootMotionSourceLibrary::ApplyRootMotionSource_MoveToForce_Parabola(UChar
                                                                            int32 Priority,
                                                                            UCurveVector* ParabolaCurve,
                                                                            int32 Segment,
-                                                                           FRootMotionSourceMoveSetting Setting,
-                                                                           float StartTime)
+                                                                           float StartTime,
+                                                                           ERootMotionSourceApplyMode ApplyMode,
+                                                                           FRootMotionSourceMoveSetting Setting)
 {
-	if (!MovementComponent || Duration<=0)
+	if (!MovementComponent || Duration <= 0)
+	{
+		return -1;
+	}
+	const int32 NewPriority = ExcuteApplyMode(MovementComponent, InstanceName, Priority, ApplyMode);
+	if (NewPriority < 0)
 	{
 		return -1;
 	}
@@ -154,7 +178,7 @@ int32 URootMotionSourceLibrary::ApplyRootMotionSource_MoveToForce_Parabola(UChar
 	MoveToForce->AccumulateMode = Setting.AccumulateMod;
 	MoveToForce->Settings.SetFlag(
 		static_cast<ERootMotionSourceSettingsFlags>(static_cast<uint8>(Setting.SourcesSetting)));
-	MoveToForce->Priority = Priority;
+	MoveToForce->Priority = NewPriority;
 
 	MoveToForce->StartLocation = StartLocation;
 	MoveToForce->Duration = Duration;
@@ -165,20 +189,21 @@ int32 URootMotionSourceLibrary::ApplyRootMotionSource_MoveToForce_Parabola(UChar
 	if (ParabolaCurve)
 	{
 		float OffsetZ = (TargetLocation - StartLocation).Z;
-		Target.Z = StartLocation.Z;
+		//Target.Z = StartLocation.Z;
 
 
 		FRichCurve ZCurve; //= Setting.ParabolaCurve->FloatCurve;
 		for (int32 i = 0; i <= Segment; i++)
 		{
 			const float Fraction = static_cast<float>(i) / static_cast<float>(Segment);
+			const float FractionZ = FMath::Lerp<float,float>(0, TargetLocation.Z - StartLocation.Z, Fraction);
 			const FVector Value = ParabolaCurve->GetVectorValue(Fraction);
-			ZCurve.AddKey(Fraction, OffsetZ * Value.Z);
+			ZCurve.AddKey(Fraction, OffsetZ * Value.Z - FractionZ );
 		}
 		TimeCurve->FloatCurve = ParabolaCurve->FloatCurves[0];
 		PathCurve->FloatCurves[2] = ZCurve;
 	}
-	
+
 	MoveToForce->TargetLocation = Target;
 
 	MoveToForce->TimeMappingCurve = TimeCurve;
@@ -191,11 +216,58 @@ int32 URootMotionSourceLibrary::ApplyRootMotionSource_MoveToForce_Parabola(UChar
 	return MovementComponent->ApplyRootMotionSource(MoveToForce);
 }
 
+int32 URootMotionSourceLibrary::ApplyRootMotionSource_PathMoveToForce(UCharacterMovementComponent* MovementComponent, FName InstanceName, FVector StartLocation, TArray<FRootMotionSourcePathMoveToData> Path, int32 Priority, float StartTime,
+	ERootMotionSourceApplyMode ApplyMode, FRootMotionSourceMoveSetting ExtraSetting)
+{
+
+	if (!MovementComponent)
+	{
+		return -1;
+	}
+	if (Path.Num()<0)
+	{
+		return -1;
+	}
+	float Duration = 0;
+	for (auto P: Path)
+	{
+		if (P.Duration <=0)
+		{
+			return -1;
+		}
+		Duration += P.Duration;
+	}
+	const int32 NewPriority = ExcuteApplyMode(MovementComponent, InstanceName, Priority, ApplyMode);
+	if (NewPriority < 0)
+	{
+		return -1;
+	}
+	
+	TSharedPtr<FRootMotionSource_PathMoveToForce> PathMoveTo = MakeShared<
+		FRootMotionSource_PathMoveToForce>();
+	PathMoveTo->InstanceName = InstanceName == NAME_None ? TEXT("PathMoveTo") : InstanceName;
+	PathMoveTo->AccumulateMode = ExtraSetting.AccumulateMod;
+	PathMoveTo->Settings.SetFlag(
+		static_cast<ERootMotionSourceSettingsFlags>(static_cast<uint8>(ExtraSetting.SourcesSetting)));
+	PathMoveTo->Priority = NewPriority;
+	PathMoveTo->Path = Path;
+	PathMoveTo->StartLocation = StartLocation;
+	PathMoveTo->Duration = FMath::Max(Duration, KINDA_SMALL_NUMBER);
+	PathMoveTo->FinishVelocityParams.Mode = static_cast<ERootMotionFinishVelocityMode>(static_cast<uint8>(ExtraSetting.
+		VelocityOnFinishMode));
+	PathMoveTo->FinishVelocityParams.SetVelocity = ExtraSetting.FinishSetVelocity;
+	PathMoveTo->FinishVelocityParams.ClampVelocity = ExtraSetting.FinishClampVelocity;
+	PathMoveTo->SetTime(StartTime);
+	return MovementComponent->ApplyRootMotionSource(PathMoveTo);
+
+	
+}
+
 bool URootMotionSourceLibrary::ApplyRootMotionSource_SimpleAnimation(UCharacterMovementComponent* MovementComponent,
                                                                      USkeletalMeshComponent* Mesh,
                                                                      UAnimSequence* DataAnimation, FName InstanceName,
                                                                      int32 Priority,
-                                                                     float StartTime, float EndTime, float TimeScale)
+                                                                     float StartTime, float EndTime, float TimeScale, ERootMotionSourceApplyMode ApplyMode)
 {
 	if (!MovementComponent || !DataAnimation || !Mesh || (StartTime > EndTime && EndTime > 0))
 	{
@@ -206,7 +278,11 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_SimpleAnimation(UCharacterM
 	{
 		return false;
 	}
-
+	const int32 NewPriority = ExcuteApplyMode(MovementComponent, InstanceName, Priority, ApplyMode);
+	if (NewPriority < 0)
+	{
+		return false;
+	}
 	float HalfHeight = Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
 	//持续时间, 获取的是动画时长或者自定的时间
 	const float Length = DataAnimation->GetPlayLength();
@@ -275,7 +351,7 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_SimpleAnimation(UCharacterM
 	FVector WorldTarget = UKismetMathLibrary::TransformLocation(Character->GetActorTransform(), RMT.GetLocation());
 
 	FRootMotionSourceMoveSetting Setting;
-	FName InsName = InstanceName == NAME_None ? TEXT("ParabolaMoveTo") : InstanceName;
+	FName InsName = InstanceName == NAME_None ? TEXT("SimpleAnimation") : InstanceName;
 	//用MoveToForce来计算路径, 尝试过用Jump+OffsetCv, 但是Jump的CV不好用
 	return ApplyRootMotionSource_MoveToForce(MovementComponent, InsName, StartLocation, WorldTarget,
 	                                         Duration * TimeScale, Priority, OffsetCV) >= 0;
@@ -286,9 +362,14 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationAdjustment(
 	UCharacterMovementComponent* MovementComponent, USkeletalMeshComponent* Mesh, UAnimSequence* DataAnimation,
 	FName InstanceName, int32 Priority, FVector TargetLocation,
 	bool bLocalTarget, bool bTargetBasedOnFoot, bool bUseCustomDuration, float CustomDuration, float AnimWarpingScale,
-	ERootMotionAnimWarpingType WarpingType, ERootMotionSourceAnimWarpingAxis WarpingAxis)
+	ERootMotionAnimWarpingType WarpingType, ERootMotionSourceAnimWarpingAxis WarpingAxis, ERootMotionSourceApplyMode ApplyMode)
 {
 	if (!MovementComponent || !DataAnimation || !Mesh || (bUseCustomDuration && CustomDuration <= 0))
+	{
+		return false;
+	}
+	const int32 NewPriority = ExcuteApplyMode(MovementComponent, InstanceName, Priority, ApplyMode);
+	if (NewPriority < 0)
 	{
 		return false;
 	}
@@ -400,9 +481,14 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationAdjustmentByFrame(
 	FName InstanceName, int32 Priority, FVector TargetLocation,
 	bool bLocalTarget, bool bTargetBasedOnFoot, int32 FromFrame, int32 TargetFram, float TimeScale,
 	float AnimWarpingScale,
-	ERootMotionAnimWarpingType WarpingType, ERootMotionSourceAnimWarpingAxis WarpingAxis)
+	ERootMotionAnimWarpingType WarpingType, ERootMotionSourceAnimWarpingAxis WarpingAxis, ERootMotionSourceApplyMode ApplyMode)
 {
 	if (!MovementComponent || !DataAnimation || !Mesh || FromFrame < 0 || (TargetFram > 0 && FromFrame > TargetFram))
+	{
+		return false;
+	}
+	const int32 NewPriority = ExcuteApplyMode(MovementComponent, InstanceName, Priority, ApplyMode);
+	if (NewPriority < 0)
 	{
 		return false;
 	}
@@ -442,9 +528,14 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationAdjustmentByTime(
 	FName InstanceName, int32 Priority, FVector TargetLocation,
 	bool bLocalTarget, bool bTargetBasedOnFoot, float FromTime, int32 TargetTime, float TimeScale,
 	float AnimWarpingScale,
-	ERootMotionAnimWarpingType WarpingType, ERootMotionSourceAnimWarpingAxis WarpingAxis)
+	ERootMotionAnimWarpingType WarpingType, ERootMotionSourceAnimWarpingAxis WarpingAxis, ERootMotionSourceApplyMode ApplyMode)
 {
 	if (!MovementComponent || !DataAnimation || !Mesh || FromTime < 0 || (TargetTime > 0 && FromTime > TargetTime))
+	{
+		return false;
+	}
+	const int32 NewPriority = ExcuteApplyMode(MovementComponent, InstanceName, Priority, ApplyMode);
+	if (NewPriority < 0)
 	{
 		return false;
 	}
@@ -559,7 +650,7 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationAdjustmentByTime(
 		OffsetCV->FloatCurves[1] = CurveY;
 		OffsetCV->FloatCurves[2] = CurveZ;
 
-		FName InsName = InstanceName == NAME_None ? TEXT("AnimationAdjustment" ): InstanceName;
+		FName InsName = InstanceName == NAME_None ? TEXT("AnimationAdjustment") : InstanceName;
 		//用MoveToForce来计算路径, 尝试过用Jump+OffsetCv, 但是Jump的CV不好用
 		return ApplyRootMotionSource_MoveToForce(MovementComponent, InsName, StartLocation, WorldTarget, Duration,
 		                                         Priority, OffsetCV) >= 0;
@@ -568,10 +659,16 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationAdjustmentByTime(
 
 bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationWarping(
 	UCharacterMovementComponent* MovementComponent, USkeletalMeshComponent* Mesh, UAnimSequence* DataAnimation,
-	TMap<FName, FVector> WarpingTarget, bool bTargetBasedOnFoot, float TimeScale,
-	float Tolerance, float AnimWarpingMulti, bool bExcludeEndAnimMotion, ERootMotionSourceAnimWarpingAxis WarpingAxis)
+	TMap<FName, FVector> WarpingTarget, FName InstanceName,
+	int32 Priority, bool bTargetBasedOnFoot, float TimeScale,
+	float Tolerance, float AnimWarpingMulti, bool bExcludeEndAnimMotion, ERootMotionSourceAnimWarpingAxis WarpingAxis, ERootMotionSourceApplyMode ApplyMode)
 {
 	if (!MovementComponent || !DataAnimation || !Mesh || WarpingTarget.Num() == 0 || TimeScale <= 0)
+	{
+		return false;
+	}
+	const int32 NewPriority = ExcuteApplyMode(MovementComponent, InstanceName, Priority, ApplyMode);
+	if (NewPriority < 0)
 	{
 		return false;
 	}
@@ -652,7 +749,7 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationWarping(
 				Time = Windows[idx].EndTime;
 				idx++;
 			}
-				//否则即使后一个窗口的起点早于前一个窗口的结束 也从结束点开始
+			//否则即使后一个窗口的起点早于前一个窗口的结束 也从结束点开始
 			else
 			{
 				TriggerData.WindowData = Windows[idx];
@@ -821,7 +918,7 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationWarping(
 						Character->GetActorTransform(), CurrTargetWS);
 					bHasWarpingTarget = true;
 				}
-					//找不到直接返回失败, 必须匹配
+				//找不到直接返回失败, 必须匹配
 				else
 				{
 					UE_LOG(LogTemp, Warning, TEXT(" wrong [WarpingTarget], need matching animation notifies "));
@@ -904,10 +1001,9 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationWarping(
 	OffsetCV->FloatCurves[1] = CurveY;
 	OffsetCV->FloatCurves[2] = CurveZ;
 
-
-	FName InstanceName = TEXT("AnimationWarping");
+	InstanceName = InstanceName == NAME_None? TEXT("AnimWarping"): InstanceName;
 	//用MoveToForce来计算路径, 尝试过用Jump+OffsetCv, 但是Jump的CV不好用
-	return ApplyRootMotionSource_MoveToForce(MovementComponent, InstanceName, StartLocation, WorldTarget, Duration, 999,
+	return ApplyRootMotionSource_MoveToForce(MovementComponent, InstanceName, StartLocation, WorldTarget, Duration, Priority,
 	                                         OffsetCV) >= 0;
 }
 
@@ -1007,12 +1103,17 @@ int32 URootMotionSourceLibrary::ApplyRootMotionSource_ConstantForece(UCharacterM
                                                                      UCurveFloat* StrengthOverTime, float Duration,
                                                                      EFinishVelocityMode VelocityOnFinishMode,
                                                                      FVector FinishSetVelocity,
-                                                                     float FinishClampVelocity, bool bEnableGravity)
+                                                                     float FinishClampVelocity, bool bEnableGravity, ERootMotionSourceApplyMode ApplyMode)
 {
+	const int32 NewPriority = ExcuteApplyMode(MovementComponent, InstanceName, Priority, ApplyMode);
+	if (NewPriority < 0)
+	{
+		return -1;
+	}
 	TSharedPtr<FRootMotionSource_ConstantForce> ConstantForce = MakeShared<FRootMotionSource_ConstantForce>();
 	ConstantForce->InstanceName = InstanceName;
 	ConstantForce->AccumulateMode = AccumulateMod;
-	ConstantForce->Priority = Priority;
+	ConstantForce->Priority = NewPriority;
 	ConstantForce->Force = WorldDirection * Strength;
 	ConstantForce->Duration = Duration;
 	ConstantForce->StrengthOverTime = StrengthOverTime;
@@ -1039,12 +1140,17 @@ int32 URootMotionSourceLibrary::ApplyRootMotionSource_RadialForece(UCharacterMov
                                                                    FRotator FixedWorldDirection,
                                                                    EFinishVelocityMode VelocityOnFinishMode,
                                                                    FVector FinishSetVelocity,
-                                                                   float FinishClampVelocity)
+                                                                   float FinishClampVelocity, ERootMotionSourceApplyMode ApplyMode)
 {
+	const int32 NewPriority = ExcuteApplyMode(MovementComponent, InstanceName, Priority, ApplyMode);
+	if (NewPriority < 0)
+	{
+		return -1;
+	}
 	TSharedPtr<FRootMotionSource_RadialForce> RadialForce = MakeShared<FRootMotionSource_RadialForce>();
 	RadialForce->InstanceName = InstanceName;
 	RadialForce->AccumulateMode = AccumulateMod;
-	RadialForce->Priority = Priority;
+	RadialForce->Priority = NewPriority;
 	RadialForce->Location = Location;
 	RadialForce->LocationActor = LocationActor;
 	RadialForce->Duration = Duration;
@@ -1295,6 +1401,37 @@ void URootMotionSourceLibrary::FiltAnimCurveOffsetAxisData(FVector& AnimOffset, 
 	}
 }
 
+int32 URootMotionSourceLibrary::ExcuteApplyMode(UCharacterMovementComponent* MovementComponent, FName PendingInstanceName, int32 PendingPriorioty, ERootMotionSourceApplyMode ApplyMode)
+{
+	if (!MovementComponent)
+	{
+		return -1;
+	}
+	if (auto RMS = MovementComponent->GetRootMotionSource(PendingInstanceName))
+	{
+		const int32 OldPriority = RMS->Priority;
+		switch (ApplyMode)
+		{
+		case ERootMotionSourceApplyMode::ApplyHigherPriority:
+			{
+				return FMath::Max(OldPriority + 1, PendingPriorioty);
+			}
+		case ERootMotionSourceApplyMode::Replace:
+			{
+				MovementComponent->RemoveRootMotionSource(PendingInstanceName);
+				return OldPriority;
+			}
+		case ERootMotionSourceApplyMode::Block:
+			{
+				return -1;
+			}
+		default:
+			return PendingPriorioty;
+		}
+	}
+	return PendingPriorioty;
+}
+
 bool URootMotionSourceLibrary::GetRootMotionSourceLocation_Runtime(UCharacterMovementComponent* MovementComponent,
                                                                    FName InstanceName, float Time, FVector& OutLocation)
 {
@@ -1307,7 +1444,7 @@ bool URootMotionSourceLibrary::GetRootMotionSourceLocation_Runtime(UCharacterMov
 	{
 		return false;
 	}
-	
+
 	if (auto RMS_MoveToDy = StaticCastSharedPtr<FRootMotionSource_MoveToDynamicForce>(RMS))
 	{
 		float Fraction = Time / RMS_MoveToDy->GetDuration();
@@ -1428,12 +1565,12 @@ bool URootMotionSourceLibrary::GetRootMotionSourceLocation_Jump(FVector& OutLoca
 }
 
 bool URootMotionSourceLibrary::GetRootMotionSourceLocation_MoveToParabola(FVector& OutLocation
-																		, UCharacterMovementComponent* MovementComponent
-																		, FVector StartLocation
-																		, FVector TargetLocation
-																		, float Duration
-																		, float CurrentTime
-																		, UCurveVector* ParabolaCurve)
+                                                                          , UCharacterMovementComponent* MovementComponent
+                                                                          , FVector StartLocation
+                                                                          , FVector TargetLocation
+                                                                          , float Duration
+                                                                          , float CurrentTime
+                                                                          , UCurveVector* ParabolaCurve)
 {
 	if (!MovementComponent || Duration <= 0 || CurrentTime < 0 || CurrentTime > Duration)
 	{
@@ -1441,7 +1578,7 @@ bool URootMotionSourceLibrary::GetRootMotionSourceLocation_MoveToParabola(FVecto
 	}
 	float Fraction = CurrentTime / Duration;
 	FVector CurrentTargetLocation = FMath::Lerp<FVector, float>(StartLocation, TargetLocation, Fraction);
-	
+
 	if (ParabolaCurve)
 	{
 		const float Z = (TargetLocation - StartLocation).Z;
@@ -1454,8 +1591,6 @@ bool URootMotionSourceLibrary::GetRootMotionSourceLocation_MoveToParabola(FVecto
 	OutLocation = CurrentTargetLocation;
 
 	return true;
-
-	
 }
 
 PRAGMA_ENABLE_OPTIMIZATION

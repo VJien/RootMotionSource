@@ -5,6 +5,22 @@
 #include "CoreMinimal.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "RootMotionSourceTypes.generated.h"
+
+UENUM(BlueprintType)
+enum class ERootMotionSourceApplyMode :uint8
+{
+	//不做处理
+	None = 0,
+	//取代同名RMS, 会先把同名RMS移除掉
+	Replace,
+	//用同名的RMS优先级+1应用
+	ApplyHigherPriority,
+	//如果有同名的RMS,那就取消应用	
+	Block,
+	//排队
+	Queue
+};
+
 UENUM(BlueprintType)
 enum class ERootMotionSourceAnimWarpingAxis :uint8
 {
@@ -62,7 +78,38 @@ enum class ESourceSettingsFlags : uint8
 
 
 
+USTRUCT(BlueprintType)
+struct FRootMotionSourcePathMoveToData
+{
+	GENERATED_BODY()
+public:
+	
+	UPROPERTY(BlueprintReadWrite)
+	FVector Target = FVector::ZeroVector;
+	UPROPERTY(BlueprintReadWrite)
+	float Duration = 0;
+	UPROPERTY(BlueprintReadWrite)
+	TObjectPtr<UCurveVector> PathOffsetCurve = nullptr;
+	UPROPERTY(BlueprintReadWrite)
+	TObjectPtr<UCurveFloat> TimeMappingCurve = nullptr;
 
+	friend FArchive&  operator << (FArchive& Ar, FRootMotionSourcePathMoveToData& D)
+	{
+		return Ar<<D.Duration<<D.Target<<D.PathOffsetCurve<<D.TimeMappingCurve;
+	}
+	virtual bool operator==(const FRootMotionSourcePathMoveToData& Other)const
+	{
+		return Target ==Other.Target && Duration == Other.Duration && PathOffsetCurve == Other.PathOffsetCurve && TimeMappingCurve == Other.TimeMappingCurve;
+	}
+	virtual bool operator!=(const FRootMotionSourcePathMoveToData& Other)const
+	{
+		return !(*this == Other);
+	}
+	bool IsValid() const
+	{
+		return Duration > 0;
+	}
+};
 
 USTRUCT(BlueprintType)
 struct FRootMotionSourceSetting
@@ -78,8 +125,6 @@ public:
 	FVector FinishSetVelocity = FVector::ZeroVector;
 	UPROPERTY(BlueprintReadWrite)
 	float FinishClampVelocity = 20;
-	UPROPERTY(BlueprintReadWrite)
-	bool bForce = false;
 };
 
 USTRUCT(BlueprintType)
