@@ -48,3 +48,66 @@ struct ROOTMOTIONEXTENSION_API FRootMotionSource_PathMoveToForce: public FRootMo
 	
 };
 
+
+USTRUCT()
+struct ROOTMOTIONEXTENSION_API FRootMotionSource_MotionWarping: public FRootMotionSource
+{
+	GENERATED_USTRUCT_BODY()
+	FRootMotionSource_MotionWarping(){};
+	virtual ~FRootMotionSource_MotionWarping() {}
+
+	
+
+	UPROPERTY()
+	TObjectPtr<UAnimSequenceBase> Animation = nullptr;
+	UPROPERTY()
+	FVector StartLocation = FVector::ZeroVector;
+	UPROPERTY()
+	FRotator StartRotation = FRotator::ZeroRotator;
+	
+	UPROPERTY()
+	float AnimStartTime = 0;
+	UPROPERTY()
+	float AnimEndTime = -1;
+	UPROPERTY()
+	bool bIgnoreZAxis = false;
+protected:
+	UPROPERTY()
+	FVector CachedTarget = FVector::ZeroVector;
+	UPROPERTY()
+	bool bInit = false;
+
+public:
+	void SetTargetLocation(FVector Target)
+	{
+		CachedTarget = Target;
+	}
+	FORCEINLINE FVector GetTargetLocation() const
+	{
+		return CachedTarget;
+	};
+	
+	virtual FTransform ProcessRootMotion(const ACharacter& Character,const FTransform& InRootMotion,  float InPreviousTime, float InCurrentTime);
+
+	virtual bool UpdateStateFrom(const FRootMotionSource* SourceToTakeStateFrom, bool bMarkForSimulatedCatchup = false) override;
+	
+	virtual void PrepareRootMotion(
+	float SimulationTime, 
+	float MovementTickTime,
+	const ACharacter& Character, 
+	const UCharacterMovementComponent& MoveComponent
+	) override;
+
+	FTransform ExtractRootMotion(float StartTime, float EndTime) const;
+	
+	virtual bool NetSerialize(FArchive& Ar, UPackageMap* Map, bool& bOutSuccess) override;
+	virtual FRootMotionSource* Clone() const override;
+
+	virtual bool Matches(const FRootMotionSource* Other) const override;
+
+	virtual bool MatchesAndHasSameState(const FRootMotionSource* Other) const override;
+	virtual UScriptStruct* GetScriptStruct() const override;
+	virtual FString ToSimpleString() const override;
+	virtual void AddReferencedObjects(class FReferenceCollector& Collector) override;
+	
+};

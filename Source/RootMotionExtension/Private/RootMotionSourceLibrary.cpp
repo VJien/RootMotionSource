@@ -17,7 +17,7 @@ class UAnimNotifyState_RootMotionSource;
 TAutoConsoleVariable<int32> CVarRMS_Debug(TEXT("b.RMS.Debug"), 0, TEXT("0: Disable 1: Enable "), ECVF_Cheat);
 PRAGMA_DISABLE_OPTIMIZATION
 
-static float EvaluateFloatCurveAtFraction(const UCurveFloat& Curve, const float Fraction)
+float URootMotionSourceLibrary::EvaluateFloatCurveAtFraction(const UCurveFloat& Curve, const float Fraction)
 {
 	float MinCurveTime(0.f);
 	float MaxCurveTime(1.f);
@@ -26,7 +26,7 @@ static float EvaluateFloatCurveAtFraction(const UCurveFloat& Curve, const float 
 	return Curve.GetFloatValue(FMath::GetRangeValue(FVector2D(MinCurveTime, MaxCurveTime), Fraction));
 }
 
-static FVector EvaluateVectorCurveAtFraction(const UCurveVector& Curve, const float Fraction)
+FVector URootMotionSourceLibrary::EvaluateVectorCurveAtFraction(const UCurveVector& Curve, const float Fraction)
 {
 	float MinCurveTime(0.f);
 	float MaxCurveTime(1.f);
@@ -196,9 +196,9 @@ int32 URootMotionSourceLibrary::ApplyRootMotionSource_MoveToForce_Parabola(UChar
 		for (int32 i = 0; i <= Segment; i++)
 		{
 			const float Fraction = static_cast<float>(i) / static_cast<float>(Segment);
-			const float FractionZ = FMath::Lerp<float,float>(0, TargetLocation.Z - StartLocation.Z, Fraction);
+			const float FractionZ = FMath::Lerp<float, float>(0, TargetLocation.Z - StartLocation.Z, Fraction);
 			const FVector Value = ParabolaCurve->GetVectorValue(Fraction);
-			ZCurve.AddKey(Fraction, OffsetZ * Value.Z - FractionZ );
+			ZCurve.AddKey(Fraction, OffsetZ * Value.Z - FractionZ);
 		}
 		TimeCurve->FloatCurve = ParabolaCurve->FloatCurves[0];
 		PathCurve->FloatCurves[2] = ZCurve;
@@ -217,21 +217,20 @@ int32 URootMotionSourceLibrary::ApplyRootMotionSource_MoveToForce_Parabola(UChar
 }
 
 int32 URootMotionSourceLibrary::ApplyRootMotionSource_PathMoveToForce(UCharacterMovementComponent* MovementComponent, FName InstanceName, FVector StartLocation, TArray<FRootMotionSourcePathMoveToData> Path, int32 Priority, float StartTime,
-	ERootMotionSourceApplyMode ApplyMode, FRootMotionSourceMoveSetting ExtraSetting)
+                                                                      ERootMotionSourceApplyMode ApplyMode, FRootMotionSourceMoveSetting ExtraSetting)
 {
-
 	if (!MovementComponent)
 	{
 		return -1;
 	}
-	if (Path.Num()<0)
+	if (Path.Num() < 0)
 	{
 		return -1;
 	}
 	float Duration = 0;
-	for (auto P: Path)
+	for (auto P : Path)
 	{
-		if (P.Duration <=0)
+		if (P.Duration <= 0)
 		{
 			return -1;
 		}
@@ -242,7 +241,7 @@ int32 URootMotionSourceLibrary::ApplyRootMotionSource_PathMoveToForce(UCharacter
 	{
 		return -1;
 	}
-	
+
 	TSharedPtr<FRootMotionSource_PathMoveToForce> PathMoveTo = MakeShared<
 		FRootMotionSource_PathMoveToForce>();
 	PathMoveTo->InstanceName = InstanceName == NAME_None ? TEXT("PathMoveTo") : InstanceName;
@@ -259,8 +258,6 @@ int32 URootMotionSourceLibrary::ApplyRootMotionSource_PathMoveToForce(UCharacter
 	PathMoveTo->FinishVelocityParams.ClampVelocity = ExtraSetting.FinishClampVelocity;
 	PathMoveTo->SetTime(StartTime);
 	return MovementComponent->ApplyRootMotionSource(PathMoveTo);
-
-	
 }
 
 bool URootMotionSourceLibrary::ApplyRootMotionSource_SimpleAnimation(UCharacterMovementComponent* MovementComponent,
@@ -1001,7 +998,7 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationWarping(
 	OffsetCV->FloatCurves[1] = CurveY;
 	OffsetCV->FloatCurves[2] = CurveZ;
 
-	InstanceName = InstanceName == NAME_None? TEXT("AnimWarping"): InstanceName;
+	InstanceName = InstanceName == NAME_None ? TEXT("AnimWarping") : InstanceName;
 	//用MoveToForce来计算路径, 尝试过用Jump+OffsetCv, 但是Jump的CV不好用
 	return ApplyRootMotionSource_MoveToForce(MovementComponent, InstanceName, StartLocation, WorldTarget, Duration, Priority,
 	                                         OffsetCV) >= 0;
@@ -1092,6 +1089,42 @@ bool URootMotionSourceLibrary::FindTriggerDataByTime(const TArray<FRootMotionSou
 		}
 	}
 	return false;
+}
+
+bool URootMotionSourceLibrary::ApplyRootMotionSource_MotionWarping_SimpleAnimation(UCharacterMovementComponent* MovementComponent,
+                                                                                   UAnimSequence* DataAnimation,
+                                                                                   FName InstanceName,
+                                                                                   int32 Priority,
+                                                                                   float StartTime,
+                                                                                   float EndTime,
+                                                                                   float Rate,
+                                                                                   bool bIgnoreZAxis,
+                                                                                   ERootMotionSourceApplyMode ApplyMode)
+{
+	if (!MovementComponent || !DataAnimation)
+	{
+		return false;
+	}
+	const int32 NewPriority = ExcuteApplyMode(MovementComponent, InstanceName, Priority, ApplyMode);
+	if (NewPriority < 0)
+	{
+		return false;
+	}
+	const float CurrEndTime = (EndTime < 0 || EndTime > DataAnimation->GetPlayLength()) ? DataAnimation->GetPlayLength() : EndTime;
+	const float Duration = (CurrEndTime - StartTime) / FMath::Max(Rate, 0.1);
+	TSharedPtr<FRootMotionSource_MotionWarping> RMS = MakeShared<FRootMotionSource_MotionWarping>();
+	RMS->InstanceName = InstanceName == NAME_None ? TEXT("MotioWarping") : InstanceName;
+	RMS->AccumulateMode = ERootMotionAccumulateMode::Override;
+	RMS->Priority = NewPriority;
+	RMS->StartLocation = MovementComponent->GetOwner()->GetActorLocation();
+	RMS->StartRotation = MovementComponent->GetOwner()->GetActorRotation();
+	RMS->Duration = Duration;
+	RMS->bIgnoreZAxis = bIgnoreZAxis;
+	RMS->Animation = DataAnimation;
+	RMS->AnimStartTime = StartTime;
+	RMS->AnimEndTime = EndTime;
+	RMS->SetTime(StartTime);
+	return MovementComponent->ApplyRootMotionSource(RMS) > -1;
 }
 
 

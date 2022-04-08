@@ -88,14 +88,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category="RootMotionSource",
 		meta = (AdvancedDisplay = "6", AutoCreateRefTerm = "ExtraSetting", CPP_Default_ExtraSetting))
 	static int32 ApplyRootMotionSource_PathMoveToForce(UCharacterMovementComponent* MovementComponent,
-															FName InstanceName,
-															FVector StartLocation, TArray<FRootMotionSourcePathMoveToData> Path,
-															int32 Priority,
-															float StartTime = 0,
-															ERootMotionSourceApplyMode ApplyMode = ERootMotionSourceApplyMode::None,
-															FRootMotionSourceMoveSetting ExtraSetting = {});
-
-
+	                                                   FName InstanceName,
+	                                                   FVector StartLocation, TArray<FRootMotionSourcePathMoveToData> Path,
+	                                                   int32 Priority,
+	                                                   float StartTime = 0,
+	                                                   ERootMotionSourceApplyMode ApplyMode = ERootMotionSourceApplyMode::None,
+	                                                   FRootMotionSourceMoveSetting ExtraSetting = {});
 
 
 #pragma region Animation
@@ -199,6 +197,19 @@ public:
 
 	static bool FindTriggerDataByTime(const TArray<FRootMotionSoueceTriggerData>& TriggerData, float Time,
 	                                  FRootMotionSoueceTriggerData& OutData);
+
+
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource", meta = (AdvancedDisplay = "3"))
+	static bool ApplyRootMotionSource_MotionWarping_SimpleAnimation(UCharacterMovementComponent* MovementComponent,
+	                                                                UAnimSequence* DataAnimation,
+	                                                                FName InstanceName, int32 Priority,
+	                                                                float StartTime = 0,
+	                                                                float EndTime = -1,
+	                                                                float Rate = 1,
+	                                                                bool bIgnoreZAxis = false,
+	                                                                ERootMotionSourceApplyMode ApplyMode = ERootMotionSourceApplyMode::None);
+
+
 #pragma endregion Animation
 
 	//模拟力的RootMotion效果,类似AddForce
@@ -263,7 +274,10 @@ public:
 	static void FiltAnimCurveOffsetAxisData(FVector& AnimOffset, ERootMotionSourceAnimWarpingAxis Axis);
 
 	static int32 ExcuteApplyMode(UCharacterMovementComponent* MovementComponent, FName PendingInstanceName, int32 PendingPriorioty, ERootMotionSourceApplyMode ApplyMode);
-	
+
+
+	static float EvaluateFloatCurveAtFraction(const UCurveFloat& Curve, const float Fraction);
+	static FVector EvaluateVectorCurveAtFraction(const UCurveVector& Curve, const float Fraction);
 	/*
 	 * 根据时间获取正在运行的RMS的实时位置
 	 */
