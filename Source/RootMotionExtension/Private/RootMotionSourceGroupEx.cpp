@@ -11,6 +11,8 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/KismetMaterialLibrary.h"
+#include "Kismet/KismetMathLibrary.h"
 
 PRAGMA_DISABLE_OPTIMIZATION
 
@@ -364,14 +366,16 @@ void FRootMotionSource_MotionWarping::PrepareRootMotion(float SimulationTime, fl
 		const float CurrEndTime = (AnimEndTime < 0 || AnimEndTime > Animation->GetPlayLength()) ? Animation->GetPlayLength() : AnimEndTime;
 		const float CalcDuration = CurrEndTime - StartTime;
 		const float TimeScale = CalcDuration / Duration;
-		FTransform Mesh2Char = Character.GetMesh()->GetComponentTransform().GetRelativeTransform(Character.GetActorTransform());
-		Mesh2Char.SetLocation(FVector::Zero());
-		
 		const FTransform StartChacterFootTransform = FTransform(StartRotation,StartLocation - FVector(0.f, 0.f, Character.GetCapsuleComponent()->GetScaledCapsuleHalfHeight()));
 		const FTransform CurrChacterFootTransform = FTransform(StartRotation,Character.GetActorLocation() - FVector(0.f, 0.f, Character.GetCapsuleComponent()->GetScaledCapsuleHalfHeight()));
+		FTransform MeshTransformWS = Character.GetMesh()->GetComponentTransform();
+		FTransform Mesh2CharInverse = StartChacterFootTransform.GetRelativeTransform(MeshTransformWS);
+		
 		FTransform TargetTransform = ExtractRootMotion(AnimStartTime, CurrEndTime);
-		TargetTransform = TargetTransform * Mesh2Char;
-		const FTransform  TargetTransformWS =  TargetTransform * StartChacterFootTransform;
+		TargetTransform = TargetTransform * MeshTransformWS;//模型世界空间的RM
+		//通过逆矩阵把模型空间转换成actor空间
+		const FTransform  TargetTransformWS =  Mesh2CharInverse * TargetTransform;
+		
 		if (!bInit)
 		{
 			bInit = true;
@@ -382,8 +386,9 @@ void FRootMotionSource_MotionWarping::PrepareRootMotion(float SimulationTime, fl
 		const float PrevTime = GetTime() * TimeScale;
 		const float CurrTime = (GetTime() + SimulationTime )  * TimeScale;
 		const FTransform CurrRootMotion = ExtractRootMotion(PrevTime, CurrTime);
+		//这个是世界空间的偏移
 		FTransform WarpTransform = ProcessRootMotion(Character, CurrRootMotion, PrevTime, CurrTime);
-		WarpTransform = WarpTransform * Mesh2Char;
+		//因为是世界空间的,所以是右乘
 		FTransform WarpTransformWS = CurrChacterFootTransform *  WarpTransform ;
 		const FVector CurrentLocation = Character.GetActorLocation() - FVector(0,0,Character.GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
 
