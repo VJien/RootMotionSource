@@ -21,6 +21,8 @@ namespace RMS
 extern TAutoConsoleVariable<int32> CVarRMS_Debug;
 }
 
+
+#pragma region FRootMotionSource_PathMoveToForce
 FRootMotionSource_PathMoveToForce::FRootMotionSource_PathMoveToForce()
 {
 }
@@ -206,8 +208,13 @@ void FRootMotionSource_PathMoveToForce::AddReferencedObjects(FReferenceCollector
 	}
 	FRootMotionSource::AddReferencedObjects(Collector);
 }
+#pragma endregion FRootMotionSource_PathMoveToForce
 
-//*******************************************
+
+
+//********************FRootMotionSource_MotionWarping***********************
+#pragma region FRootMotionSource_MotionWarping
+
 
 FTransform FRootMotionSource_MotionWarping::ProcessRootMotion(const ACharacter& Character, const FTransform& InRootMotion, float InPreviousTime, float InCurrentTime)
 {
@@ -459,7 +466,8 @@ bool FRootMotionSource_MotionWarping::NetSerialize(FArchive& Ar, UPackageMap* Ma
 
 FRootMotionSource* FRootMotionSource_MotionWarping::Clone() const
 {
-	return FRootMotionSource::Clone();
+	FRootMotionSource_MotionWarping* CopyPtr = new FRootMotionSource_MotionWarping(*this);
+	return CopyPtr;
 }
 
 bool FRootMotionSource_MotionWarping::Matches(const FRootMotionSource* Other) const
@@ -504,5 +512,120 @@ void FRootMotionSource_MotionWarping::AddReferencedObjects(FReferenceCollector& 
 	FRootMotionSource::AddReferencedObjects(Collector);
 }
 
+#pragma endregion FRootMotionSource_MotionWarping
+//*******************************FRootMotionSource_MotionWarping_AdjustmentFinalPoint*********************************************
 
+#pragma region FRootMotionSource_MotionWarping_AdjustmentFinalPoint
+
+void FRootMotionSource_MotionWarping_AdjustmentFinalPoint::PrepareRootMotion(float SimulationTime,
+	float MovementTickTime, const ACharacter& Character, const UCharacterMovementComponent& MoveComponent)
+{
+	RootMotionParams.Clear();
+
+	if (Animation && Duration > SMALL_NUMBER && MovementTickTime > SMALL_NUMBER)
+	{
+		const float CurrEndTime = (AnimEndTime < 0 || AnimEndTime > Animation->GetPlayLength()) ? Animation->GetPlayLength() : AnimEndTime;
+		const float CalcDuration = CurrEndTime - StartTime;
+		const float TimeScale = CalcDuration / Duration;
+		const FTransform StartChacterFootTransform = FTransform(StartRotation,StartLocation - FVector(0.f, 0.f, Character.GetCapsuleComponent()->GetScaledCapsuleHalfHeight()));
+		const FTransform CurrChacterFootTransform = FTransform(StartRotation,Character.GetActorLocation() - FVector(0.f, 0.f, Character.GetCapsuleComponent()->GetScaledCapsuleHalfHeight()));
+		FTransform MeshTransformWS = Character.GetMesh()->GetComponentTransform();
+		FTransform Mesh2CharInverse = StartChacterFootTransform.GetRelativeTransform(MeshTransformWS);
+		
+		FTransform TargetTransform = ExtractRootMotion(AnimStartTime, CurrEndTime);
+		TargetTransform = TargetTransform * MeshTransformWS;//模型世界空间的RM
+		//通过逆矩阵把模型空间转换成actor空间
+		const FTransform  TargetTransformWS =  Mesh2CharInverse * TargetTransform;
+		
+		if (!bInit)
+		{
+			bInit = true;
+			SetTargetLocation(TargetLocation);
+		}
+		
+		
+		const float PrevTime = GetTime() * TimeScale;
+		const float CurrTime = (GetTime() + SimulationTime )  * TimeScale;
+		const FTransform CurrRootMotion = ExtractRootMotion(PrevTime, CurrTime);
+		//这个是世界空间的偏移
+		FTransform WarpTransform = ProcessRootMotion(Character, CurrRootMotion, PrevTime, CurrTime);
+		//因为是世界空间的,所以是右乘
+		FTransform WarpTransformWS = CurrChacterFootTransform *  WarpTransform ;
+		const FVector CurrentLocation = Character.GetActorLocation() - FVector(0,0,Character.GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
+
+		FVector Force = (WarpTransformWS.GetLocation() - CurrentLocation) / MovementTickTime;
+		
+		// Debug
+#if ROOT_MOTION_DEBUG
+		if (RootMotionSourceDebug::CVarDebugRootMotionSources.GetValueOnGameThread() != 0)
+		{
+			const FVector LocDiff = MoveComponent.UpdatedComponent->GetComponentLocation() - CurrentLocation;
+			const float DebugLifetime = 5;
+			UE_LOG(LogTemp, Log, TEXT("Target = %s"),*TargetTransform.ToString());
+			// Current
+			DrawDebugCapsule(Character.GetWorld(), MoveComponent.UpdatedComponent->GetComponentLocation(), Character.GetSimpleCollisionHalfHeight(), Character.GetSimpleCollisionRadius(), FQuat::Identity, FColor::Red, false, DebugLifetime);
+
+			// Current Target
+			DrawDebugCapsule(Character.GetWorld(), WarpTransformWS.GetLocation() + LocDiff, Character.GetSimpleCollisionHalfHeight(), Character.GetSimpleCollisionRadius(), FQuat::Identity, FColor::Green, false, DebugLifetime);
+
+			// Target
+			DrawDebugCapsule(Character.GetWorld(), TargetTransformWS.GetLocation() + LocDiff, Character.GetSimpleCollisionHalfHeight(), Character.GetSimpleCollisionRadius(), FQuat::Identity, FColor::Blue, false, DebugLifetime);
+
+			// Force
+			DrawDebugLine(Character.GetWorld(), CurrentLocation, CurrentLocation + Force, FColor::Blue, false, DebugLifetime);
+		}
+#endif
+
+		FTransform NewTransform(Force);
+		RootMotionParams.Set(NewTransform);
+	}
+	else
+	{
+		checkf(Duration > SMALL_NUMBER, TEXT("FRootMotionSource_MoveToForce prepared with invalid duration."));
+	}
+
+	SetTime(GetTime() + SimulationTime);
+}
+
+bool FRootMotionSource_MotionWarping_AdjustmentFinalPoint::NetSerialize(FArchive& Ar, UPackageMap* Map,
+	bool& bOutSuccess)
+{
+	if( !FRootMotionSource::NetSerialize(Ar, Map, bOutSuccess))
+	{
+		return false;
+	}
+	Ar << TargetLocation;
+	bOutSuccess = true;
+	return bOutSuccess;
+}
+
+FRootMotionSource* FRootMotionSource_MotionWarping_AdjustmentFinalPoint::Clone() const
+{
+	FRootMotionSource_MotionWarping_AdjustmentFinalPoint* CopyPtr = new FRootMotionSource_MotionWarping_AdjustmentFinalPoint(*this);
+	return CopyPtr;
+}
+
+bool FRootMotionSource_MotionWarping_AdjustmentFinalPoint::Matches(const FRootMotionSource* Other) const
+{
+	if (!FRootMotionSource::Matches(Other))
+	{
+		return false;
+	}
+	const FRootMotionSource_MotionWarping_AdjustmentFinalPoint* OtherCast = static_cast<const FRootMotionSource_MotionWarping_AdjustmentFinalPoint*>(Other);
+
+	return TargetLocation == OtherCast->TargetLocation;;
+}
+
+
+UScriptStruct* FRootMotionSource_MotionWarping_AdjustmentFinalPoint::GetScriptStruct() const
+{
+	return FRootMotionSource_MotionWarping_AdjustmentFinalPoint::StaticStruct();
+}
+
+FString FRootMotionSource_MotionWarping_AdjustmentFinalPoint::ToSimpleString() const
+{
+	return FString::Printf(TEXT("[ID:%u]FRootMotionSource_MotionWarping_AdjustmentFinalPoint %s"), LocalID, *InstanceName.GetPlainNameString());
+}
+
+#pragma endregion FRootMotionSource_MotionWarping_AdjustmentFinalPoint
 PRAGMA_ENABLE_OPTIMIZATION

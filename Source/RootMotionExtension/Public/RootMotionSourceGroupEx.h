@@ -109,5 +109,41 @@ public:
 	virtual UScriptStruct* GetScriptStruct() const override;
 	virtual FString ToSimpleString() const override;
 	virtual void AddReferencedObjects(class FReferenceCollector& Collector) override;
+
+protected:
+
+	
+};
+
+USTRUCT()
+struct ROOTMOTIONEXTENSION_API FRootMotionSource_MotionWarping_AdjustmentFinalPoint: public FRootMotionSource_MotionWarping
+{
+	GENERATED_USTRUCT_BODY()
+	FRootMotionSource_MotionWarping_AdjustmentFinalPoint(){};
+	virtual ~FRootMotionSource_MotionWarping_AdjustmentFinalPoint() {}
+
+	
+	UPROPERTY()
+	FVector TargetLocation = FVector::ZeroVector;
+
+public:
+	
+	virtual void PrepareRootMotion(
+	float SimulationTime, 
+	float MovementTickTime,
+	const ACharacter& Character, 
+	const UCharacterMovementComponent& MoveComponent
+	) override;
+
+
+	
+	virtual bool NetSerialize(FArchive& Ar, UPackageMap* Map, bool& bOutSuccess) override;
+	virtual FRootMotionSource* Clone() const override;
+
+	virtual bool Matches(const FRootMotionSource* Other) const override;
+
+	virtual UScriptStruct* GetScriptStruct() const override;
+	virtual FString ToSimpleString() const override;
+
 	
 };
