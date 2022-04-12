@@ -16,7 +16,7 @@ class UCharacterMovementComponent;
 
 
 UCLASS()
-class ROOTMOTIONEXTENSION_API URootMotionSourceLibrary : public UBlueprintFunctionLibrary
+class RMS_API URootMotionSourceLibrary : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
 public:

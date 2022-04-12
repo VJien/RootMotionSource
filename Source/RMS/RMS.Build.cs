@@ -2,9 +2,9 @@
 
 using UnrealBuildTool;
 
-public class RootMotionExtension : ModuleRules
+public class RMS : ModuleRules
 {
-	public RootMotionExtension(ReadOnlyTargetRules Target) : base(Target)
+	public RMS(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		

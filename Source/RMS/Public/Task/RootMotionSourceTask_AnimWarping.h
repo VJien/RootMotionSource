@@ -10,7 +10,7 @@
 
 class URootMotionSourceComponent;
 UCLASS()
-class ROOTMOTIONEXTENSION_API URootMotionSourceTask_AnimWarping : public URootMotionSourceTask_Base
+class RMS_API URootMotionSourceTask_AnimWarping : public URootMotionSourceTask_Base
 {
 	GENERATED_BODY()
 public:

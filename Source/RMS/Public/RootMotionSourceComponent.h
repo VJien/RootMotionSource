@@ -16,7 +16,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FRMSTaskDlg2p, URootMotionSourceTas
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRMSTaskDlg1p, URootMotionSourceTask_Base*, TaskObject);
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent), BlueprintType, Blueprintable)
-class ROOTMOTIONEXTENSION_API URootMotionSourceComponent : public UGameplayTasksComponent
+class RMS_API URootMotionSourceComponent : public UGameplayTasksComponent
 {
 	GENERATED_UCLASS_BODY()
 public:

@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
 
-class FRootMotionExtensionModule : public IModuleInterface
+class FRMSModule : public IModuleInterface
 {
 public:
 

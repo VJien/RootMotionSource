@@ -8,7 +8,7 @@
 #include "RootMotionSourceGroupEx.generated.h"
 
 USTRUCT()
-struct ROOTMOTIONEXTENSION_API FRootMotionSource_PathMoveToForce: public FRootMotionSource
+struct RMS_API FRootMotionSource_PathMoveToForce: public FRootMotionSource
 {
 	GENERATED_USTRUCT_BODY()
 	FRootMotionSource_PathMoveToForce();
@@ -50,7 +50,7 @@ struct ROOTMOTIONEXTENSION_API FRootMotionSource_PathMoveToForce: public FRootMo
 
 
 USTRUCT()
-struct ROOTMOTIONEXTENSION_API FRootMotionSource_AnimWarping: public FRootMotionSource
+struct RMS_API FRootMotionSource_AnimWarping: public FRootMotionSource
 {
 	GENERATED_USTRUCT_BODY()
 	FRootMotionSource_AnimWarping(){};
@@ -127,7 +127,7 @@ protected:
 };
 
 USTRUCT()
-struct ROOTMOTIONEXTENSION_API FRootMotionSource_AnimWarping_FinalPoint: public FRootMotionSource_AnimWarping
+struct RMS_API FRootMotionSource_AnimWarping_FinalPoint: public FRootMotionSource_AnimWarping
 {
 	GENERATED_USTRUCT_BODY()
 	FRootMotionSource_AnimWarping_FinalPoint(){};
@@ -161,7 +161,7 @@ public:
 
 
 USTRUCT()
-struct ROOTMOTIONEXTENSION_API FRootMotionSource_AnimWarping_MultiTargets: public FRootMotionSource_AnimWarping
+struct RMS_API FRootMotionSource_AnimWarping_MultiTargets: public FRootMotionSource_AnimWarping
 {
 	GENERATED_USTRUCT_BODY()
 	FRootMotionSource_AnimWarping_MultiTargets(){};

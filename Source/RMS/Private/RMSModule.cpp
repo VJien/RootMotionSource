@@ -1,16 +1,16 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "RootMotionExtensionModule.h"
+#include "RMSModule.h"
 
-#define LOCTEXT_NAMESPACE "FRootMotionExtensionModule"
+#define LOCTEXT_NAMESPACE "FRMSModule"
 
-void FRootMotionExtensionModule::StartupModule()
+void FRMSModule::StartupModule()
 {
 	// This code will execute after your module is loaded into memory; the exact timing is specified in the .uplugin file per-module
 
 }
 
-void FRootMotionExtensionModule::ShutdownModule()
+void FRMSModule::ShutdownModule()
 {
 	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
 	// we call this function before unloading the module.
@@ -18,4 +18,4 @@ void FRootMotionExtensionModule::ShutdownModule()
 
 #undef LOCTEXT_NAMESPACE
 	
-IMPLEMENT_MODULE(FRootMotionExtensionModule, RootMotionExtension)
+IMPLEMENT_MODULE(FRMSModule, RMS)

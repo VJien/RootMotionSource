@@ -10,7 +10,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRMSDlg, URootMotionSourceTask_Base*
 
 class URootMotionSourceComponent;
 UCLASS()
-class ROOTMOTIONEXTENSION_API URootMotionSourceTask_Base : public UGameplayTask
+class RMS_API URootMotionSourceTask_Base : public UGameplayTask
 {
 	GENERATED_BODY()
 public:

@@ -10,7 +10,7 @@
  * 
  */
 UCLASS()
-class ROOTMOTIONEXTENSION_API UAnimNotifyState_RootMotionSource : public UAnimNotifyState
+class RMS_API UAnimNotifyState_RootMotionSource : public UAnimNotifyState
 {
 	GENERATED_BODY()
 public:
