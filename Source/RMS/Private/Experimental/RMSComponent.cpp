@@ -1,12 +1,12 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "RootMotionSourceComponent.h"
+#include "Experimental/RMSComponent.h"
 
-#include "Task/RootMotionSourceTask_MoveTo.h"
+#include "Experimental/Task/RMSTask_MoveTo.h"
 
 // Sets default values for this component's properties
-URootMotionSourceComponent::URootMotionSourceComponent(const FObjectInitializer& Object):Super(Object)
+URMSComponent::URMSComponent(const FObjectInitializer& Object):Super(Object)
 {
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
@@ -17,7 +17,7 @@ URootMotionSourceComponent::URootMotionSourceComponent(const FObjectInitializer&
 
 
 // Called when the game starts
-void URootMotionSourceComponent::BeginPlay()
+void URMSComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
@@ -27,7 +27,7 @@ void URootMotionSourceComponent::BeginPlay()
 
 
 // Called every frame
-void URootMotionSourceComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+void URMSComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	if (bListenTaskEnd)
@@ -59,27 +59,27 @@ void URootMotionSourceComponent::TickComponent(float DeltaTime, ELevelTick TickT
 
 }
 
-void URootMotionSourceComponent::Init(UCharacterMovementComponent* InMovementComponent)
+void URMSComponent::Init(UCharacterMovementComponent* InMovementComponent)
 {
 	MovementComponent = InMovementComponent;
 }
 
-int32 URootMotionSourceComponent::TryActivateTask(URootMotionSourceTask_Base* Task)
+int32 URMSComponent::TryActivateTask(URMSTask_Base* Task)
 {
-	if (URootMotionSourceTask_MoveTo* MoveTo = Cast<URootMotionSourceTask_MoveTo>(Task))
+	if (URMSTask_MoveTo* MoveTo = Cast<URMSTask_MoveTo>(Task))
 	{
 		if (!MoveTo->RootMotionComponent.IsValid())
 		{
 			OnTaskEnd.Broadcast(MoveTo,false);
 			return -1;
 		}
-		if (bListenTaskEnd /*&& !MoveTo->Setting.bForce*/ && URootMotionSourceLibrary::IsRootMotionSourceValid(MoveTo->RootMotionComponent->GetMovementComponent(), MoveTo->GetInstanceName()))
+		if (bListenTaskEnd /*&& !MoveTo->Setting.bForce*/ && URMSLibrary::IsRootMotionSourceValid(MoveTo->RootMotionComponent->GetMovementComponent(), MoveTo->GetInstanceName()))
 		{
 			OnTaskEnd.Broadcast(MoveTo,false);
 			return -1;
 		}
-		int32 ID = URootMotionSourceLibrary::ApplyRootMotionSource_MoveToForce(MoveTo->RootMotionComponent->GetMovementComponent(), MoveTo->GetInstanceName(), MoveTo->StartLocation,MoveTo->TargetLocation,MoveTo->Duration,
-			MoveTo->Priority,MoveTo->PathOffsetCurve,0,ERootMotionSourceApplyMode::None,MoveTo->Setting);
+		int32 ID = URMSLibrary::ApplyRootMotionSource_MoveToForce(MoveTo->RootMotionComponent->GetMovementComponent(), MoveTo->GetInstanceName(), MoveTo->StartLocation,MoveTo->TargetLocation,MoveTo->Duration,
+			MoveTo->Priority,MoveTo->PathOffsetCurve,0,ERMSApplyMode::None,MoveTo->Setting);
 		MoveTo->Activate();
 		if (bListenTaskEnd)
 		{
@@ -91,7 +91,7 @@ int32 URootMotionSourceComponent::TryActivateTask(URootMotionSourceTask_Base* Ta
 	return -1;
 }
 
-void URootMotionSourceComponent::SetRms_TargetByLocation(FName Instance, FVector Location)
+void URMSComponent::SetRms_TargetByLocation(FName Instance, FVector Location)
 {
 	auto item = RMSMap.Find(Instance);
 	if (item)
@@ -102,7 +102,7 @@ void URootMotionSourceComponent::SetRms_TargetByLocation(FName Instance, FVector
 	}
 }
 
-void URootMotionSourceComponent::SetRms_TargetByRotation(FName Instance, FRotator Rotation)
+void URMSComponent::SetRms_TargetByRotation(FName Instance, FRotator Rotation)
 {
 	auto item = RMSMap.Find(Instance);
 	if (item)
@@ -113,7 +113,7 @@ void URootMotionSourceComponent::SetRms_TargetByRotation(FName Instance, FRotato
 	}
 }
 
-void URootMotionSourceComponent::SetRms_Target(FName Instance, FVector Location, FRotator Rotation)
+void URMSComponent::SetRms_Target(FName Instance, FVector Location, FRotator Rotation)
 {
 	RMSMap.Add(Instance,FTransform(FQuat::MakeFromRotator(Rotation),Location ));
 }

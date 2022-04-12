@@ -1,11 +1,11 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "RootMotionSourceGroupEx.h"
+#include "RMSGroupEx.h"
 #include "Curves/CurveVector.h"
 #include "Curves/CurveFloat.h"
 #include "DrawDebugHelpers.h"
-#include "RootMotionSourceLibrary.h"
+#include "RMSLibrary.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -23,12 +23,12 @@ FRootMotionSource_PathMoveToForce::FRootMotionSource_PathMoveToForce()
 {
 }
 
-FVector FRootMotionSource_PathMoveToForce::GetPathOffsetInWorldSpace(const float MoveFraction, FRootMotionSourcePathMoveToData Data, FVector Start) const
+FVector FRootMotionSource_PathMoveToForce::GetPathOffsetInWorldSpace(const float MoveFraction, FRMSPathMoveToData Data, FVector Start) const
 {
 	if (Data.PathOffsetCurve)
 	{
 		// Calculate path offset
-		const FVector PathOffsetInFacingSpace = URootMotionSourceLibrary::EvaluateVectorCurveAtFraction(*Data.PathOffsetCurve, MoveFraction);
+		const FVector PathOffsetInFacingSpace = URMSLibrary::EvaluateVectorCurveAtFraction(*Data.PathOffsetCurve, MoveFraction);
 		FRotator FacingRotation((Data.Target - Start).Rotation());
 		FacingRotation.Pitch = 0.f;
 		return FacingRotation.RotateVector(PathOffsetInFacingSpace);
@@ -36,7 +36,7 @@ FVector FRootMotionSource_PathMoveToForce::GetPathOffsetInWorldSpace(const float
 	return FVector::ZeroVector;
 }
 
-bool FRootMotionSource_PathMoveToForce::GetPathDataByTime(float InTime, FRootMotionSourcePathMoveToData& OutCurrData, FRootMotionSourcePathMoveToData& OutLastData) const
+bool FRootMotionSource_PathMoveToForce::GetPathDataByTime(float InTime, FRMSPathMoveToData& OutCurrData, FRMSPathMoveToData& OutLastData) const
 {
 	float Time = 0;
 	if (Duration > 0)
@@ -96,7 +96,7 @@ void FRootMotionSource_PathMoveToForce::PrepareRootMotion(float SimulationTime, 
 		float MoveFraction = (NextFrame - LastData.Duration) / CurrData.Duration;
 		if (CurrData.TimeMappingCurve)
 		{
-			MoveFraction = URootMotionSourceLibrary::EvaluateFloatCurveAtFraction(*CurrData.TimeMappingCurve, MoveFraction);
+			MoveFraction = URMSLibrary::EvaluateFloatCurveAtFraction(*CurrData.TimeMappingCurve, MoveFraction);
 		}
 		FVector CurrentTargetLocation = FMath::Lerp<FVector, float>(LastData.Target, CurrData.Target, MoveFraction);
 		CurrentTargetLocation += GetPathOffsetInWorldSpace(MoveFraction, CurrData, LastData.Target);

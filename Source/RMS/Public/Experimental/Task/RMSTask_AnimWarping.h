@@ -3,19 +3,19 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "RootMotionSourceLibrary.h"
-#include "RootMotionSourceTask_Base.h"
-#include "RootMotionSourceTask_AnimWarping.generated.h"
+#include "RMSLibrary.h"
+#include "RMSTask_Base.h"
+#include "RMSTask_AnimWarping.generated.h"
 
 
-class URootMotionSourceComponent;
+class URMSComponent;
 UCLASS()
-class RMS_API URootMotionSourceTask_AnimWarping : public URootMotionSourceTask_Base
+class RMS_API URMSTask_AnimWarping : public URMSTask_Base
 {
 	GENERATED_BODY()
 public:
 	UFUNCTION(BlueprintCallable, Category=RootMotionSource, meta = (BlueprintInternalUseOnly = "TRUE"))
-	static URootMotionSourceTask_AnimWarping* RootMotionSourceTask_AnimWarping(URootMotionSourceComponent* RootMotionComponent, UAnimSequence*Anim,  TMap<FName, FVector> WarpingInfo);
+	static URMSTask_AnimWarping* RootMotionSourceTask_AnimWarping(URMSComponent* RootMotionComponent, UAnimSequence*Anim,  TMap<FName, FVector> WarpingInfo);
 
 	
 	virtual void Activate() override;
@@ -23,7 +23,7 @@ public:
 	virtual void Resume() override;
 	virtual void TickTask(float DeltaTime) override;
 
-	virtual  void OnTaskFinished_Implementation(URootMotionSourceTask_Base* TaskObject,  bool bSuccess) override;;
+	virtual  void OnTaskFinished_Implementation(URMSTask_Base* TaskObject,  bool bSuccess) override;;
 	
 
 

@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "RootMotionSourceTypes.generated.h"
+#include "RMSTypes.generated.h"
 
 namespace RMS
 {
@@ -16,7 +16,7 @@ static TAutoConsoleVariable<int32> CVarRMS_Debug(TEXT("b.RMS.Debug"), 0, TEXT("0
 
 
 UENUM(BlueprintType)
-enum class ERootMotionSourceApplyMode :uint8
+enum class ERMSApplyMode :uint8
 {
 	//不做处理
 	None = 0,
@@ -31,7 +31,7 @@ enum class ERootMotionSourceApplyMode :uint8
 };
 
 UENUM(BlueprintType)
-enum class ERootMotionSourceAnimWarpingAxis :uint8
+enum class ERMSAnimWarpingAxis :uint8
 {
 	None = 0,
 	X,
@@ -44,7 +44,7 @@ enum class ERootMotionSourceAnimWarpingAxis :uint8
 };
 
 UENUM(BlueprintType)
-enum class ERootMotionAnimWarpingType :uint8
+enum class ERMSAnimWarpingType :uint8
 {
 	// compared with total length
 	BasedOnLength = 0,
@@ -56,7 +56,7 @@ enum class ERootMotionAnimWarpingType :uint8
  * 
  */
 UENUM(BlueprintType)
-enum class EFinishVelocityMode :uint8
+enum class ERMSFinishVelocityMode :uint8
 {
 	// Maintain the last velocity root motion gave to the character
 	MaintainLastRootMotionVelocity = 0,
@@ -67,7 +67,7 @@ enum class EFinishVelocityMode :uint8
 };
 
 UENUM(BlueprintType)
-enum class ESourceSettingsFlags : uint8
+enum class ERMSSourceSettingsFlags : uint8
 {
 	None,
 	// Source will switch character to Falling mode with any "Z up" velocity added.
@@ -87,7 +87,7 @@ enum class ESourceSettingsFlags : uint8
 
 
 USTRUCT(BlueprintType)
-struct FRootMotionSourcePathMoveToData
+struct FRMSPathMoveToData
 {
 	GENERATED_BODY()
 public:
@@ -100,18 +100,18 @@ public:
 	UPROPERTY(BlueprintReadWrite)
 	TObjectPtr<UCurveFloat> TimeMappingCurve = nullptr;
 
-	friend FArchive& operator <<(FArchive& Ar, FRootMotionSourcePathMoveToData& D)
+	friend FArchive& operator <<(FArchive& Ar, FRMSPathMoveToData& D)
 	{
 		return Ar << D.Duration << D.Target << D.PathOffsetCurve << D.TimeMappingCurve;
 	}
 
-	virtual bool operator==(const FRootMotionSourcePathMoveToData& Other) const
+	virtual bool operator==(const FRMSPathMoveToData& Other) const
 	{
 		return Target == Other.Target && Duration == Other.Duration && PathOffsetCurve == Other.PathOffsetCurve &&
 			TimeMappingCurve == Other.TimeMappingCurve;
 	}
 
-	virtual bool operator!=(const FRootMotionSourcePathMoveToData& Other) const
+	virtual bool operator!=(const FRMSPathMoveToData& Other) const
 	{
 		return !(*this == Other);
 	}
@@ -123,14 +123,14 @@ public:
 };
 
 USTRUCT(BlueprintType)
-struct FRootMotionSourceSetting
+struct FRMSSetting
 {
 	GENERATED_BODY()
 public:
 	UPROPERTY(BlueprintReadWrite)
 	ERootMotionAccumulateMode AccumulateMod = ERootMotionAccumulateMode::Override;
 	UPROPERTY(BlueprintReadWrite)
-	EFinishVelocityMode VelocityOnFinishMode = EFinishVelocityMode::ClampVelocity;
+	ERMSFinishVelocityMode VelocityOnFinishMode = ERMSFinishVelocityMode::ClampVelocity;
 	UPROPERTY(BlueprintReadWrite)
 	FVector FinishSetVelocity = FVector::ZeroVector;
 	UPROPERTY(BlueprintReadWrite)
@@ -138,18 +138,18 @@ public:
 };
 
 USTRUCT(BlueprintType)
-struct FRootMotionSourceMoveSetting : public FRootMotionSourceSetting
+struct FRMSSetting_Move : public FRMSSetting
 {
 	GENERATED_BODY()
 public:
 	UPROPERTY(BlueprintReadWrite)
 	bool bRestrictSpeedToExpected = false;
 	UPROPERTY(BlueprintReadWrite)
-	ESourceSettingsFlags SourcesSetting = ESourceSettingsFlags::UseSensitiveLiftoffCheck;
+	ERMSSourceSettingsFlags SourcesSetting = ERMSSourceSettingsFlags::UseSensitiveLiftoffCheck;
 };
 
 USTRUCT(BlueprintType)
-struct FRootMotionSourceJumpSetting : public FRootMotionSourceSetting
+struct FRMSSetting_Jump : public FRMSSetting
 {
 	GENERATED_BODY()
 public:
@@ -161,12 +161,12 @@ public:
 
 
 USTRUCT(BlueprintType)
-struct FRootMotionSoueceWindowData
+struct FRMSWindowData
 {
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Defaults")
-	TObjectPtr<class UAnimNotifyState_RootMotionSource> AnimNotify = nullptr;
+	TObjectPtr<class UAnimNotifyState_RMS_Warping> AnimNotify = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Defaults")
 	float StartTime = 0.f;
@@ -182,13 +182,13 @@ struct FRootMotionSoueceWindowData
 };
 
 USTRUCT(BlueprintType)
-struct FRootMotionSoueceTriggerData
+struct FRMSNotifyTriggerData
 {
 	GENERATED_BODY()
 
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Defaults")
-	FRootMotionSoueceWindowData WindowData;
+	FRMSWindowData WindowData;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Defaults")
 	FVector Target = FVector::ZeroVector;
@@ -196,7 +196,7 @@ struct FRootMotionSoueceTriggerData
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Defaults")
 	bool bHasTarget = false;
 
-	virtual bool operator ==(const FRootMotionSoueceTriggerData& other)
+	virtual bool operator ==(const FRMSNotifyTriggerData& other)
 	{
 		return WindowData.AnimNotify == other.WindowData.AnimNotify &&
 			WindowData.EndTime == other.WindowData.EndTime &&
@@ -205,7 +205,7 @@ struct FRootMotionSoueceTriggerData
 			bHasTarget == other.bHasTarget;
 	}
 
-	virtual bool operator !=(const FRootMotionSoueceTriggerData& other)
+	virtual bool operator !=(const FRMSNotifyTriggerData& other)
 	{
 		return !((*this) == other);
 	}
@@ -222,17 +222,17 @@ struct FRootMotionSoueceTriggerData
 
 
 USTRUCT(BlueprintType)
-struct FRootMotionSource_TriggerTarget
+struct FRMSTarget
 {
 	GENERATED_BODY()
-	FRootMotionSource_TriggerTarget()
+	FRMSTarget()
 	{
 	}
 
-	virtual ~FRootMotionSource_TriggerTarget()
+	virtual ~FRMSTarget()
 	{
 	}
-	friend FArchive& operator <<(FArchive& Ar, FRootMotionSource_TriggerTarget& D)
+	friend FArchive& operator <<(FArchive& Ar, FRMSTarget& D)
 	{
 		return Ar << D.Target << D.StartTime << D.EndTime ;
 	}
@@ -245,7 +245,7 @@ struct FRootMotionSource_TriggerTarget
 	FVector Target = FVector::ZeroVector;
 
 
-	virtual bool operator ==(const FRootMotionSource_TriggerTarget& other)const
+	virtual bool operator ==(const FRMSTarget& other)const
 	{
 		return 
 			StartTime == other.StartTime &&
@@ -253,7 +253,7 @@ struct FRootMotionSource_TriggerTarget
 			Target == other.Target ;
 	}
 
-	virtual bool operator !=(const FRootMotionSource_TriggerTarget& other)const
+	virtual bool operator !=(const FRMSTarget& other)const
 	{
 		return !((*this) == other);
 	}

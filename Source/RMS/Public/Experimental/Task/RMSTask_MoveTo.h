@@ -3,22 +3,22 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "RootMotionSourceLibrary.h"
-#include "RootMotionSourceTask_Base.h"
-#include "RootMotionSourceTask_MoveTo.generated.h"
+#include "RMSLibrary.h"
+#include "RMSTask_Base.h"
+#include "RMSTask_MoveTo.generated.h"
 
 
-class URootMotionSourceComponent;
+class URMSComponent;
 UCLASS()
-class RMS_API URootMotionSourceTask_MoveTo : public URootMotionSourceTask_Base
+class RMS_API URMSTask_MoveTo : public URMSTask_Base
 {
 	GENERATED_BODY()
 public:
 	UFUNCTION(BlueprintCallable, Category=RootMotionSource, meta = (BlueprintInternalUseOnly = "TRUE"))
-	static URootMotionSourceTask_MoveTo* RootMotionSourceTask_MoveTo(URootMotionSourceComponent* RootMotionComponent,FName RmsInstanceName,
+	static URMSTask_MoveTo* RootMotionSourceTask_MoveTo(URMSComponent* RootMotionComponent,FName RmsInstanceName,
 												   FVector StartLocation, FVector TargetLocation, float Duration,
 												   int32 Priority,
-												   FRootMotionSourceMoveSetting Setting,
+												   FRMSSetting_Move Setting,
 												   UCurveVector* PathOffsetCurve = nullptr);
 
 	
@@ -27,7 +27,7 @@ public:
 	virtual void Resume() override;
 	virtual void TickTask(float DeltaTime) override;
 
-	virtual  void OnTaskFinished_Implementation(URootMotionSourceTask_Base* TaskObject,  bool bSuccess) override;;
+	virtual  void OnTaskFinished_Implementation(URMSTask_Base* TaskObject,  bool bSuccess) override;;
 	
 
 	
@@ -49,6 +49,6 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	UCurveVector* PathOffsetCurve = nullptr;
 	UPROPERTY(BlueprintReadOnly)
-	FRootMotionSourceMoveSetting Setting;
+	FRMSSetting_Move Setting;
 
 };

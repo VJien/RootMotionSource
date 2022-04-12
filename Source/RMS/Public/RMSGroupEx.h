@@ -3,9 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "RootMotionSourceTypes.h"
+#include "RMSTypes.h"
 #include "GameFramework/RootMotionSource.h"
-#include "RootMotionSourceGroupEx.generated.h"
+#include "RMSGroupEx.generated.h"
 
 USTRUCT()
 struct RMS_API FRootMotionSource_PathMoveToForce: public FRootMotionSource
@@ -17,15 +17,15 @@ struct RMS_API FRootMotionSource_PathMoveToForce: public FRootMotionSource
 	UPROPERTY()
 	FVector StartLocation = FVector::ZeroVector;
 	UPROPERTY()
-	TArray<FRootMotionSourcePathMoveToData> Path;
-	FRootMotionSourcePathMoveToData CurrData;
-	FRootMotionSourcePathMoveToData LastData;
+	TArray<FRMSPathMoveToData> Path;
+	FRMSPathMoveToData CurrData;
+	FRMSPathMoveToData LastData;
 	int32 Index = -1;
 
 	
-	FVector GetPathOffsetInWorldSpace(const float MoveFraction, FRootMotionSourcePathMoveToData Data, FVector Start) const;
+	FVector GetPathOffsetInWorldSpace(const float MoveFraction, FRMSPathMoveToData Data, FVector Start) const;
 
-	bool GetPathDataByTime(float Time, FRootMotionSourcePathMoveToData& OutCurrData, FRootMotionSourcePathMoveToData& OutLastData)const;
+	bool GetPathDataByTime(float Time, FRMSPathMoveToData& OutCurrData, FRMSPathMoveToData& OutLastData)const;
 
 	virtual bool UpdateStateFrom(const FRootMotionSource* SourceToTakeStateFrom, bool bMarkForSimulatedCatchup = false) override;
 	
@@ -169,12 +169,12 @@ struct RMS_API FRootMotionSource_AnimWarping_MultiTargets: public FRootMotionSou
 
 	
 	UPROPERTY()
-	TArray<FRootMotionSource_TriggerTarget> TriggerDatas;
+	TArray<FRMSTarget> TriggerDatas;
 protected:
 	UPROPERTY()
-	FRootMotionSource_TriggerTarget CurrTriggerData;
+	FRMSTarget CurrTriggerData;
 	// UPROPERTY()
-	// FRootMotionSource_TriggerTarget LastTriggerData;
+	// FRMSTarget LastTriggerData;
 
 	void UpdateTriggerTarget(float SimulationTime, float TimeScale);
 public:

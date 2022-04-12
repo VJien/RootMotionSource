@@ -5,18 +5,18 @@
 #include "CoreMinimal.h"
 #include "GameplayTasksComponent.h"
 
-#include "RootMotionSourceLibrary.h"
+#include "RMSLibrary.h"
 
-#include "RootMotionSourceComponent.generated.h"
+#include "RMSComponent.generated.h"
 
 
 
-class URootMotionSourceTask_Base;
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FRMSTaskDlg2p, URootMotionSourceTask_Base*, TaskObject, bool, bSuccess);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRMSTaskDlg1p, URootMotionSourceTask_Base*, TaskObject);
+class URMSTask_Base;
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FRMSTaskDlg2p, URMSTask_Base*, TaskObject, bool, bSuccess);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRMSTaskDlg1p, URMSTask_Base*, TaskObject);
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent), BlueprintType, Blueprintable)
-class RMS_API URootMotionSourceComponent : public UGameplayTasksComponent
+class RMS_API URMSComponent : public UGameplayTasksComponent
 {
 	GENERATED_UCLASS_BODY()
 public:
@@ -31,7 +31,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category=RootMotionSourceComponent)
 	void Init(UCharacterMovementComponent* MovementComponent);
 	UFUNCTION(BlueprintCallable, Category=RootMotionSourceComponent)
-	int32 TryActivateTask(URootMotionSourceTask_Base* Task);
+	int32 TryActivateTask(URMSTask_Base* Task);
 
 	UFUNCTION(BlueprintCallable, Category=RootMotionSourceComponent)
 	void SetRms_TargetByLocation(FName Instance, FVector Location);
@@ -60,7 +60,7 @@ protected:
 	TMap<int32, bool> DirtIDs;
 
 	UPROPERTY(BlueprintReadWrite)
-	TMap<int32, URootMotionSourceTask_Base*> CurrentTasks;
+	TMap<int32, URMSTask_Base*> CurrentTasks;
 	
 	UPROPERTY(BlueprintReadWrite)
 	TWeakObjectPtr<UCharacterMovementComponent> MovementComponent = nullptr;

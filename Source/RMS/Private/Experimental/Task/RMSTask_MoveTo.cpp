@@ -1,14 +1,14 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Task/RootMotionSourceTask_MoveTo.h"
+#include "Experimental/Task/RMSTask_MoveTo.h"
 
-#include "RootMotionSourceComponent.h"
+#include "Experimental/RMSComponent.h"
 
-URootMotionSourceTask_MoveTo* URootMotionSourceTask_MoveTo::RootMotionSourceTask_MoveTo(URootMotionSourceComponent* RootMotionComponent, FName InstanceName,
+URMSTask_MoveTo* URMSTask_MoveTo::RootMotionSourceTask_MoveTo(URMSComponent* RootMotionComponent, FName InstanceName,
 												   FVector StartLocation, FVector TargetLocation, float Duration,
 												   int32 Priority,
-												   FRootMotionSourceMoveSetting Setting,
+												   FRMSSetting_Move Setting,
 												   UCurveVector* PathOffsetCurve)
 {
 	if (!RootMotionComponent->GetMovementComponent())
@@ -16,7 +16,7 @@ URootMotionSourceTask_MoveTo* URootMotionSourceTask_MoveTo::RootMotionSourceTask
 		return nullptr;
 	}
 
-	URootMotionSourceTask_MoveTo* Task = NewRootMotionSourceTask<URootMotionSourceTask_MoveTo>(RootMotionComponent,InstanceName,Priority);
+	URMSTask_MoveTo* Task = NewRootMotionSourceTask<URMSTask_MoveTo>(RootMotionComponent,InstanceName,Priority);
 	Task->StartLocation = StartLocation;
 	Task->TargetLocation = TargetLocation;
 	Task->Duration = Duration;
@@ -25,38 +25,38 @@ URootMotionSourceTask_MoveTo* URootMotionSourceTask_MoveTo::RootMotionSourceTask
 	Task->Setting = Setting;
 	Task->RootMotionComponent = RootMotionComponent;
 	Task->ID = RootMotionComponent->TryActivateTask(Task);
-	RootMotionComponent->OnTaskEnd.AddDynamic(Task, &URootMotionSourceTask_MoveTo::OnTaskFinished);
+	RootMotionComponent->OnTaskEnd.AddDynamic(Task, &URMSTask_MoveTo::OnTaskFinished);
 	return Task;
 }
 
 
 
-void URootMotionSourceTask_MoveTo::Activate()
+void URMSTask_MoveTo::Activate()
 {
 	Super::Activate();
 }
 
-void URootMotionSourceTask_MoveTo::Pause()
+void URMSTask_MoveTo::Pause()
 {
 	Super::Pause();
 }
 
-void URootMotionSourceTask_MoveTo::Resume()
+void URMSTask_MoveTo::Resume()
 {
 	Super::Resume();
 }
 
-void URootMotionSourceTask_MoveTo::TickTask(float DeltaTime)
+void URMSTask_MoveTo::TickTask(float DeltaTime)
 {
 	Super::TickTask(DeltaTime);
 }
 
-void URootMotionSourceTask_MoveTo::OnTaskFinished_Implementation(URootMotionSourceTask_Base* TaskObject, bool bSuccess)
+void URMSTask_MoveTo::OnTaskFinished_Implementation(URMSTask_Base* TaskObject, bool bSuccess)
 {
 	Super::OnTaskFinished_Implementation(TaskObject, bSuccess);
 	if (RootMotionComponent.IsValid())
 	{
-		RootMotionComponent->OnTaskEnd.RemoveDynamic(this, &URootMotionSourceTask_Base::OnTaskFinished);
+		RootMotionComponent->OnTaskEnd.RemoveDynamic(this, &URMSTask_Base::OnTaskFinished);
 	}
 	if (bSuccess)
 	{
