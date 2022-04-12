@@ -6,6 +6,15 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "RootMotionSourceTypes.generated.h"
 
+namespace RMS
+{
+static TAutoConsoleVariable<int32> CVarRMS_Debug(TEXT("b.RMS.Debug"), 0, TEXT("0: Disable 1: Enable "), ECVF_Cheat);
+}
+
+
+
+
+
 UENUM(BlueprintType)
 enum class ERootMotionSourceApplyMode :uint8
 {
@@ -77,13 +86,11 @@ enum class ESourceSettingsFlags : uint8
 };
 
 
-
 USTRUCT(BlueprintType)
 struct FRootMotionSourcePathMoveToData
 {
 	GENERATED_BODY()
 public:
-	
 	UPROPERTY(BlueprintReadWrite)
 	FVector Target = FVector::ZeroVector;
 	UPROPERTY(BlueprintReadWrite)
@@ -93,18 +100,22 @@ public:
 	UPROPERTY(BlueprintReadWrite)
 	TObjectPtr<UCurveFloat> TimeMappingCurve = nullptr;
 
-	friend FArchive&  operator << (FArchive& Ar, FRootMotionSourcePathMoveToData& D)
+	friend FArchive& operator <<(FArchive& Ar, FRootMotionSourcePathMoveToData& D)
 	{
-		return Ar<<D.Duration<<D.Target<<D.PathOffsetCurve<<D.TimeMappingCurve;
+		return Ar << D.Duration << D.Target << D.PathOffsetCurve << D.TimeMappingCurve;
 	}
-	virtual bool operator==(const FRootMotionSourcePathMoveToData& Other)const
+
+	virtual bool operator==(const FRootMotionSourcePathMoveToData& Other) const
 	{
-		return Target ==Other.Target && Duration == Other.Duration && PathOffsetCurve == Other.PathOffsetCurve && TimeMappingCurve == Other.TimeMappingCurve;
+		return Target == Other.Target && Duration == Other.Duration && PathOffsetCurve == Other.PathOffsetCurve &&
+			TimeMappingCurve == Other.TimeMappingCurve;
 	}
-	virtual bool operator!=(const FRootMotionSourcePathMoveToData& Other)const
+
+	virtual bool operator!=(const FRootMotionSourcePathMoveToData& Other) const
 	{
 		return !(*this == Other);
 	}
+
 	bool IsValid() const
 	{
 		return Duration > 0;
@@ -116,7 +127,6 @@ struct FRootMotionSourceSetting
 {
 	GENERATED_BODY()
 public:
-	
 	UPROPERTY(BlueprintReadWrite)
 	ERootMotionAccumulateMode AccumulateMod = ERootMotionAccumulateMode::Override;
 	UPROPERTY(BlueprintReadWrite)
@@ -132,7 +142,6 @@ struct FRootMotionSourceMoveSetting : public FRootMotionSourceSetting
 {
 	GENERATED_BODY()
 public:
-	
 	UPROPERTY(BlueprintReadWrite)
 	bool bRestrictSpeedToExpected = false;
 	UPROPERTY(BlueprintReadWrite)
@@ -144,7 +153,6 @@ struct FRootMotionSourceJumpSetting : public FRootMotionSourceSetting
 {
 	GENERATED_BODY()
 public:
-	
 	UPROPERTY(BlueprintReadWrite)
 	float MinimumLandedTriggerTime = 0;
 	UPROPERTY(BlueprintReadWrite)
@@ -209,5 +217,53 @@ struct FRootMotionSoueceTriggerData
 		WindowData.StartTime = 0;
 		Target = FVector::ZeroVector;
 		bHasTarget = false;
+	}
+};
+
+
+USTRUCT(BlueprintType)
+struct FRootMotionSource_TriggerTarget
+{
+	GENERATED_BODY()
+	FRootMotionSource_TriggerTarget()
+	{
+	}
+
+	virtual ~FRootMotionSource_TriggerTarget()
+	{
+	}
+	friend FArchive& operator <<(FArchive& Ar, FRootMotionSource_TriggerTarget& D)
+	{
+		return Ar << D.Target << D.StartTime << D.EndTime ;
+	}
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Defaults")
+	float StartTime = 0;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Defaults")
+	float EndTime = 0;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Defaults")
+	FVector Target = FVector::ZeroVector;
+
+
+	virtual bool operator ==(const FRootMotionSource_TriggerTarget& other)const
+	{
+		return 
+			StartTime == other.StartTime &&
+			EndTime == other.EndTime &&
+			Target == other.Target ;
+	}
+
+	virtual bool operator !=(const FRootMotionSource_TriggerTarget& other)const
+	{
+		return !((*this) == other);
+	}
+
+	FORCEINLINE void Reset()
+	{
+		
+		EndTime = 0;
+		StartTime = 0;
+		Target = FVector::ZeroVector;
+		
 	}
 };

@@ -16,10 +16,6 @@
 
 PRAGMA_DISABLE_OPTIMIZATION
 
-namespace RMS
-{
-extern TAutoConsoleVariable<int32> CVarRMS_Debug;
-}
 
 
 #pragma region FRootMotionSource_PathMoveToForce
@@ -112,7 +108,7 @@ void FRootMotionSource_PathMoveToForce::PrepareRootMotion(float SimulationTime, 
 
 		// Debug
 #if ROOT_MOTION_DEBUG
-		if (RootMotionSourceDebug::CVarDebugRootMotionSources.GetValueOnGameThread() != 0)
+		if (RMS::CVarRMS_Debug.GetValueOnGameThread() != 0)
 		{
 			const FVector LocDiff = MoveComponent.UpdatedComponent->GetComponentLocation() - CurrentLocation;
 			const float DebugLifetime = 5.0f;
@@ -212,18 +208,18 @@ void FRootMotionSource_PathMoveToForce::AddReferencedObjects(FReferenceCollector
 
 
 
-//********************FRootMotionSource_MotionWarping***********************
-#pragma region FRootMotionSource_MotionWarping
+//********************FRootMotionSource_AnimWarping***********************
+#pragma region FRootMotionSource_AnimWarping
 
 
-FTransform FRootMotionSource_MotionWarping::ProcessRootMotion(const ACharacter& Character, const FTransform& InRootMotion, float InPreviousTime, float InCurrentTime)
+FTransform FRootMotionSource_AnimWarping::ProcessRootMotion(const ACharacter& Character, const FTransform& InRootMotion, float InPreviousTime, float InCurrentTime)
 {
 	FTransform FinalRootMotion = InRootMotion;
 	if (!Animation || !IsValid(&Character))
 	{
 		return InRootMotion;
 	}
-	float EndTime = AnimEndTime;
+	float EndTime = GetCurrentAnimEndTime();
 	if (EndTime < 0 || EndTime>Animation->GetPlayLength())
 	{
 		EndTime = Animation->GetPlayLength();
@@ -354,7 +350,7 @@ FTransform FRootMotionSource_MotionWarping::ProcessRootMotion(const ACharacter& 
 	return FinalRootMotion;
 }
 
-bool FRootMotionSource_MotionWarping::UpdateStateFrom(const FRootMotionSource* SourceToTakeStateFrom, bool bMarkForSimulatedCatchup)
+bool FRootMotionSource_AnimWarping::UpdateStateFrom(const FRootMotionSource* SourceToTakeStateFrom, bool bMarkForSimulatedCatchup)
 {
 	if (!FRootMotionSource::UpdateStateFrom(SourceToTakeStateFrom, bMarkForSimulatedCatchup))
 	{
@@ -364,7 +360,7 @@ bool FRootMotionSource_MotionWarping::UpdateStateFrom(const FRootMotionSource* S
 	return true;
 }
 
-void FRootMotionSource_MotionWarping::PrepareRootMotion(float SimulationTime, float MovementTickTime, const ACharacter& Character, const UCharacterMovementComponent& MoveComponent)
+void FRootMotionSource_AnimWarping::PrepareRootMotion(float SimulationTime, float MovementTickTime, const ACharacter& Character, const UCharacterMovementComponent& MoveComponent)
 {
 	RootMotionParams.Clear();
 
@@ -403,7 +399,7 @@ void FRootMotionSource_MotionWarping::PrepareRootMotion(float SimulationTime, fl
 		
 		// Debug
 #if ROOT_MOTION_DEBUG
-		if (RootMotionSourceDebug::CVarDebugRootMotionSources.GetValueOnGameThread() != 0)
+		if (RMS::CVarRMS_Debug.GetValueOnGameThread() != 0)
 		{
 			const FVector LocDiff = MoveComponent.UpdatedComponent->GetComponentLocation() - CurrentLocation;
 			const float DebugLifetime = 5;
@@ -433,7 +429,7 @@ void FRootMotionSource_MotionWarping::PrepareRootMotion(float SimulationTime, fl
 	SetTime(GetTime() + SimulationTime);
 }
 
-FTransform FRootMotionSource_MotionWarping::ExtractRootMotion(float InStartTime, float InEndTime) const
+FTransform FRootMotionSource_AnimWarping::ExtractRootMotion(float InStartTime, float InEndTime) const
 {
 	FTransform OutTransform;
 	if (UAnimSequence* Seq = Cast<UAnimSequence>(Animation))
@@ -447,7 +443,7 @@ FTransform FRootMotionSource_MotionWarping::ExtractRootMotion(float InStartTime,
 	return OutTransform;
 }
 
-bool FRootMotionSource_MotionWarping::NetSerialize(FArchive& Ar, UPackageMap* Map, bool& bOutSuccess)
+bool FRootMotionSource_AnimWarping::NetSerialize(FArchive& Ar, UPackageMap* Map, bool& bOutSuccess)
 {
 	if (!FRootMotionSource::NetSerialize(Ar, Map, bOutSuccess))
 	{
@@ -459,24 +455,25 @@ bool FRootMotionSource_MotionWarping::NetSerialize(FArchive& Ar, UPackageMap* Ma
 	Ar << Animation;
 	Ar << StartRotation;
 	Ar << bIgnoreZAxis;
+	Ar << CachedEndTime;
 
 	bOutSuccess = true;
 	return true;
 }
 
-FRootMotionSource* FRootMotionSource_MotionWarping::Clone() const
+FRootMotionSource* FRootMotionSource_AnimWarping::Clone() const
 {
-	FRootMotionSource_MotionWarping* CopyPtr = new FRootMotionSource_MotionWarping(*this);
+	FRootMotionSource_AnimWarping* CopyPtr = new FRootMotionSource_AnimWarping(*this);
 	return CopyPtr;
 }
 
-bool FRootMotionSource_MotionWarping::Matches(const FRootMotionSource* Other) const
+bool FRootMotionSource_AnimWarping::Matches(const FRootMotionSource* Other) const
 {
 	if (!FRootMotionSource::Matches(Other))
 	{
 		return false;
 	}
-	const FRootMotionSource_MotionWarping* OtherCast = static_cast<const FRootMotionSource_MotionWarping*>(Other);
+	const FRootMotionSource_AnimWarping* OtherCast = static_cast<const FRootMotionSource_AnimWarping*>(Other);
 
 	return StartLocation == OtherCast->StartLocation &&
 		StartRotation == OtherCast->StartRotation &&
@@ -486,7 +483,7 @@ bool FRootMotionSource_MotionWarping::Matches(const FRootMotionSource* Other) co
 		bIgnoreZAxis == OtherCast->bIgnoreZAxis;
 }
 
-bool FRootMotionSource_MotionWarping::MatchesAndHasSameState(const FRootMotionSource* Other) const
+bool FRootMotionSource_AnimWarping::MatchesAndHasSameState(const FRootMotionSource* Other) const
 {
 	if (!FRootMotionSource::MatchesAndHasSameState(Other))
 	{
@@ -496,28 +493,28 @@ bool FRootMotionSource_MotionWarping::MatchesAndHasSameState(const FRootMotionSo
 	return true;
 }
 
-UScriptStruct* FRootMotionSource_MotionWarping::GetScriptStruct() const
+UScriptStruct* FRootMotionSource_AnimWarping::GetScriptStruct() const
 {
-	return FRootMotionSource_MotionWarping::StaticStruct();
+	return FRootMotionSource_AnimWarping::StaticStruct();
 }
 
-FString FRootMotionSource_MotionWarping::ToSimpleString() const
+FString FRootMotionSource_AnimWarping::ToSimpleString() const
 {
-	return FString::Printf(TEXT("[ID:%u]FRootMotionSource_MotionWarping %s"), LocalID, *InstanceName.GetPlainNameString());
+	return FString::Printf(TEXT("[ID:%u]FRootMotionSource_AnimWarping %s"), LocalID, *InstanceName.GetPlainNameString());
 }
 
-void FRootMotionSource_MotionWarping::AddReferencedObjects(FReferenceCollector& Collector)
+void FRootMotionSource_AnimWarping::AddReferencedObjects(FReferenceCollector& Collector)
 {
 	Collector.AddReferencedObject(Animation);
 	FRootMotionSource::AddReferencedObjects(Collector);
 }
 
-#pragma endregion FRootMotionSource_MotionWarping
-//*******************************FRootMotionSource_MotionWarping_AdjustmentFinalPoint*********************************************
+#pragma endregion FRootMotionSource_AnimWarping
+//*******************************FRootMotionSource_AnimWarping_FinalPoint*********************************************
 
-#pragma region FRootMotionSource_MotionWarping_AdjustmentFinalPoint
+#pragma region FRootMotionSource_AnimWarping_FinalPoint
 
-void FRootMotionSource_MotionWarping_AdjustmentFinalPoint::PrepareRootMotion(float SimulationTime,
+void FRootMotionSource_AnimWarping_FinalPoint::PrepareRootMotion(float SimulationTime,
 	float MovementTickTime, const ACharacter& Character, const UCharacterMovementComponent& MoveComponent)
 {
 	RootMotionParams.Clear();
@@ -557,7 +554,7 @@ void FRootMotionSource_MotionWarping_AdjustmentFinalPoint::PrepareRootMotion(flo
 		
 		// Debug
 #if ROOT_MOTION_DEBUG
-		if (RootMotionSourceDebug::CVarDebugRootMotionSources.GetValueOnGameThread() != 0)
+		if (RMS::CVarRMS_Debug.GetValueOnGameThread() != 0)
 		{
 			const FVector LocDiff = MoveComponent.UpdatedComponent->GetComponentLocation() - CurrentLocation;
 			const float DebugLifetime = 5;
@@ -587,7 +584,7 @@ void FRootMotionSource_MotionWarping_AdjustmentFinalPoint::PrepareRootMotion(flo
 	SetTime(GetTime() + SimulationTime);
 }
 
-bool FRootMotionSource_MotionWarping_AdjustmentFinalPoint::NetSerialize(FArchive& Ar, UPackageMap* Map,
+bool FRootMotionSource_AnimWarping_FinalPoint::NetSerialize(FArchive& Ar, UPackageMap* Map,
 	bool& bOutSuccess)
 {
 	if( !FRootMotionSource::NetSerialize(Ar, Map, bOutSuccess))
@@ -599,33 +596,178 @@ bool FRootMotionSource_MotionWarping_AdjustmentFinalPoint::NetSerialize(FArchive
 	return bOutSuccess;
 }
 
-FRootMotionSource* FRootMotionSource_MotionWarping_AdjustmentFinalPoint::Clone() const
+FRootMotionSource* FRootMotionSource_AnimWarping_FinalPoint::Clone() const
 {
-	FRootMotionSource_MotionWarping_AdjustmentFinalPoint* CopyPtr = new FRootMotionSource_MotionWarping_AdjustmentFinalPoint(*this);
+	FRootMotionSource_AnimWarping_FinalPoint* CopyPtr = new FRootMotionSource_AnimWarping_FinalPoint(*this);
 	return CopyPtr;
 }
 
-bool FRootMotionSource_MotionWarping_AdjustmentFinalPoint::Matches(const FRootMotionSource* Other) const
+bool FRootMotionSource_AnimWarping_FinalPoint::Matches(const FRootMotionSource* Other) const
 {
 	if (!FRootMotionSource::Matches(Other))
 	{
 		return false;
 	}
-	const FRootMotionSource_MotionWarping_AdjustmentFinalPoint* OtherCast = static_cast<const FRootMotionSource_MotionWarping_AdjustmentFinalPoint*>(Other);
+	const FRootMotionSource_AnimWarping_FinalPoint* OtherCast = static_cast<const FRootMotionSource_AnimWarping_FinalPoint*>(Other);
 
 	return TargetLocation == OtherCast->TargetLocation;;
 }
 
 
-UScriptStruct* FRootMotionSource_MotionWarping_AdjustmentFinalPoint::GetScriptStruct() const
+UScriptStruct* FRootMotionSource_AnimWarping_FinalPoint::GetScriptStruct() const
 {
-	return FRootMotionSource_MotionWarping_AdjustmentFinalPoint::StaticStruct();
+	return FRootMotionSource_AnimWarping_FinalPoint::StaticStruct();
 }
 
-FString FRootMotionSource_MotionWarping_AdjustmentFinalPoint::ToSimpleString() const
+FString FRootMotionSource_AnimWarping_FinalPoint::ToSimpleString() const
 {
-	return FString::Printf(TEXT("[ID:%u]FRootMotionSource_MotionWarping_AdjustmentFinalPoint %s"), LocalID, *InstanceName.GetPlainNameString());
+	return FString::Printf(TEXT("[ID:%u]FRootMotionSource_AnimWarping_FinalPoint %s"), LocalID, *InstanceName.GetPlainNameString());
 }
 
-#pragma endregion FRootMotionSource_MotionWarping_AdjustmentFinalPoint
+#pragma endregion FRootMotionSource_AnimWarping_FinalPoint
+
+//***************************FRootMotionSource_AnimWarping_MultiTargets********************************
+#pragma region FRootMotionSource_AnimWarping_MultiTargets
+
+void FRootMotionSource_AnimWarping_MultiTargets::UpdateTriggerTarget(float SimulationTime, float TimeScale)
+{
+	const float CurrTime = (GetTime() + SimulationTime )  * TimeScale;
+	
+	for (int32 i = 0; i<TriggerDatas.Num(); i++ )
+	{
+		if (CurrTime >= TriggerDatas[i].StartTime && CurrTime <= TriggerDatas[i].EndTime)
+		{
+			
+			CurrTriggerData = TriggerDatas[i];
+			return;
+		}
+	}
+}
+
+void FRootMotionSource_AnimWarping_MultiTargets::PrepareRootMotion(float SimulationTime, float MovementTickTime,
+                                                                   const ACharacter& Character, const UCharacterMovementComponent& MoveComponent)
+{
+	RootMotionParams.Clear();
+
+	if (TriggerDatas.Num()>0 && Animation && Duration > SMALL_NUMBER && MovementTickTime > SMALL_NUMBER)
+	{
+		
+		AnimEndTime = Animation->GetPlayLength();
+		const float TimeScale = AnimEndTime / Duration;
+		float RMStartTime = 0;
+		float RMEndTime = 0;
+		if (!bInit)
+		{
+			bInit = true;
+			CurrTriggerData = TriggerDatas[0];
+			SetTargetLocation(CurrTriggerData.Target);
+			SetCurrentAnimEndTime(CurrTriggerData.EndTime);
+			RMEndTime = CurrTriggerData.EndTime;
+		}
+		else
+		{
+			UpdateTriggerTarget(SimulationTime, TimeScale);
+			SetCurrentAnimEndTime(CurrTriggerData.EndTime);
+			SetTargetLocation(CurrTriggerData.Target);
+			RMStartTime = CurrTriggerData.StartTime;
+			RMEndTime = CurrTriggerData.EndTime;
+		}
+
+		
+		const FTransform StartChacterFootTransform = FTransform(StartRotation,StartLocation - FVector(0.f, 0.f, Character.GetCapsuleComponent()->GetScaledCapsuleHalfHeight()));
+		const FTransform CurrChacterFootTransform = FTransform(StartRotation,Character.GetActorLocation() - FVector(0.f, 0.f, Character.GetCapsuleComponent()->GetScaledCapsuleHalfHeight()));
+		FTransform MeshTransformWS = Character.GetMesh()->GetComponentTransform();
+		FTransform Mesh2CharInverse = StartChacterFootTransform.GetRelativeTransform(MeshTransformWS);
+		FTransform RootMotionTargetTransform = ExtractRootMotion(RMStartTime, RMEndTime);
+		RootMotionTargetTransform = RootMotionTargetTransform * MeshTransformWS;//模型世界空间的RM
+		//通过逆矩阵把模型空间转换成actor空间
+		const FTransform  RootMotionTargetTransformWS =  Mesh2CharInverse * RootMotionTargetTransform;
+		
+	
+		
+		const float PrevTime = GetTime() * TimeScale;
+		const float CurrTime = (GetTime() + SimulationTime )  * TimeScale;
+		
+		const FTransform CurrRootMotion = ExtractRootMotion(PrevTime, CurrTime);
+		//这个是世界空间的偏移
+		FTransform WarpTransform = ProcessRootMotion(Character, CurrRootMotion, PrevTime, CurrTime);
+		//因为是世界空间的,所以是右乘
+		FTransform WarpTransformWS = CurrChacterFootTransform *  WarpTransform ;
+		const FVector CurrentLocation = Character.GetActorLocation() - FVector(0,0,Character.GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
+
+		FVector Force = (WarpTransformWS.GetLocation() - CurrentLocation) / MovementTickTime;
+		
+		// Debug
+#if ROOT_MOTION_DEBUG
+		if (RMS::CVarRMS_Debug.GetValueOnGameThread() != 0)
+		{
+			const FVector LocDiff = MoveComponent.UpdatedComponent->GetComponentLocation() - CurrentLocation;
+			const float DebugLifetime = 5;
+			const FVector LastPos = TriggerDatas[TriggerDatas.Num() -1].Target;
+			UE_LOG(LogTemp, Log, TEXT("Target = %s"),*RootMotionTargetTransform.ToString());
+			// Current
+			DrawDebugCapsule(Character.GetWorld(), MoveComponent.UpdatedComponent->GetComponentLocation(), Character.GetSimpleCollisionHalfHeight(), Character.GetSimpleCollisionRadius(), FQuat::Identity, FColor::Red, false, DebugLifetime);
+
+			// Current Target
+			DrawDebugCapsule(Character.GetWorld(), WarpTransformWS.GetLocation() + LocDiff, Character.GetSimpleCollisionHalfHeight(), Character.GetSimpleCollisionRadius(), FQuat::Identity, FColor::Green, false, DebugLifetime);
+
+			// Target
+			DrawDebugCapsule(Character.GetWorld(), LastPos + LocDiff, Character.GetSimpleCollisionHalfHeight(), Character.GetSimpleCollisionRadius(), FQuat::Identity, FColor::Blue, false, DebugLifetime);
+
+			// Force
+			DrawDebugLine(Character.GetWorld(), CurrentLocation, CurrentLocation + Force, FColor::Blue, false, DebugLifetime);
+
+			DrawDebugCapsule(Character.GetWorld(), CurrTriggerData.Target + LocDiff, Character.GetSimpleCollisionHalfHeight(), Character.GetSimpleCollisionRadius(), FQuat::Identity, FColor::Purple, false, DebugLifetime);
+		}
+#endif
+
+		FTransform NewTransform(Force);
+		RootMotionParams.Set(NewTransform);
+	}
+	else
+	{
+		checkf(Duration > SMALL_NUMBER, TEXT("FRootMotionSource_MoveToForce prepared with invalid duration."));
+	}
+
+	SetTime(GetTime() + SimulationTime);
+}
+
+bool FRootMotionSource_AnimWarping_MultiTargets::NetSerialize(FArchive& Ar, UPackageMap* Map, bool& bOutSuccess)
+{
+	if( !FRootMotionSource::NetSerialize(Ar, Map, bOutSuccess))
+	{
+		return false;
+	}
+	Ar << TriggerDatas;
+	bOutSuccess = true;
+	return bOutSuccess;
+}
+
+FRootMotionSource* FRootMotionSource_AnimWarping_MultiTargets::Clone() const
+{
+	FRootMotionSource_AnimWarping_MultiTargets* CopyPtr = new FRootMotionSource_AnimWarping_MultiTargets(*this);
+	return CopyPtr;
+}
+
+bool FRootMotionSource_AnimWarping_MultiTargets::Matches(const FRootMotionSource* Other) const
+{
+	if (!FRootMotionSource::Matches(Other))
+	{
+		return false;
+	}
+	const FRootMotionSource_AnimWarping_MultiTargets* OtherCast = static_cast<const FRootMotionSource_AnimWarping_MultiTargets*>(Other);
+
+	return TriggerDatas == OtherCast->TriggerDatas;;
+}
+
+UScriptStruct* FRootMotionSource_AnimWarping_MultiTargets::GetScriptStruct() const
+{
+	return FRootMotionSource_AnimWarping_MultiTargets::StaticStruct();
+}
+
+FString FRootMotionSource_AnimWarping_MultiTargets::ToSimpleString() const
+{
+	return FString::Printf(TEXT("[ID:%u]FRootMotionSource_AnimWarping_MultiTargets %s"), LocalID, *InstanceName.GetPlainNameString());
+}
+#pragma endregion FRootMotionSource_AnimWarping_MultiTargets
 PRAGMA_ENABLE_OPTIMIZATION

@@ -90,6 +90,10 @@ public:
 	                                                        FRootMotionSourceMoveSetting ExtraSetting = {});
 
 
+	/**
+	* 多路径版本的MoveToForce
+	* 
+	*/
 	UFUNCTION(BlueprintCallable, Category="RootMotionSource",
 		meta = (AdvancedDisplay = "6", AutoCreateRefTerm = "ExtraSetting", CPP_Default_ExtraSetting))
 	static int32 ApplyRootMotionSource_PathMoveToForce(UCharacterMovementComponent* MovementComponent,
@@ -106,12 +110,13 @@ public:
 #pragma region Animation
 	/**
 	* BM: BasedOnMoveTo, 即基于MoveTo,把动画信息烘焙成动态曲线
+	* 
 	* 直接使用动画的RootMotion数据,效果等同于播放RootMotion蒙太奇动画
 	* @param DataAnimation    参考RootMotion数据的动画, 该节点本身不负责播放动画
 	* @param EndTime		  播放的结束时间, 如果小于0,那么就使用最终的动画长度
 	* 
 	*/
-	UFUNCTION(BlueprintCallable, Category="RootMotionSource", meta = (AdvancedDisplay = "5"))
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource|DEPRECATED", meta = (AdvancedDisplay = "5"))
 	static bool ApplyRootMotionSource_SimpleAnimation_BM(UCharacterMovementComponent* MovementComponent,
 	                                                     UAnimSequence* DataAnimation,
 	                                                     FName InstanceName,
@@ -126,9 +131,9 @@ public:
 	* 直接使用动画的RootMotion数据,效果等同于播放RootMotion蒙太奇动画
 	* @param DataAnimation    参考RootMotion数据的动画, 该节点本身不负责播放动画
 	* @param EndTime		  播放的结束时间, 如果小于0,那么就使用最终的动画长度
-	* 
+	* @param bIgnoreZAxis	  忽略Z方向的RootMotion
 	*/
-	UFUNCTION(BlueprintCallable, Category="RootMotionSource", meta = (AdvancedDisplay = "3"))
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource|Animation", meta = (AdvancedDisplay = "3"))
 	static bool ApplyRootMotionSource_SimpleAnimation(UCharacterMovementComponent* MovementComponent,
 	                                                  UAnimSequence* DataAnimation,
 	                                                  FName InstanceName,
@@ -165,17 +170,24 @@ public:
 		                                                         ERootMotionSourceApplyMode::None);
 
 	/**
-	* 依据动画RootMotion数据适配目标点的运动,效果类似MotionWarping,  
+	* 依据动画RootMotion数据适配目标点的运动,效果类似MotionWarping, 只需要设置一个最终的目标位置
 	* <请确认位置是基于脚底还是角色中心>
 	* @param DataAnimation      参考RootMotion数据的动画, 该节点本身不负责播放动画
 	* @param bLocalTarget		如果为true,那么偏移信息是本地空间的
 	* @param bTargetBasedOnFoot 目标位置是基于脚底还是胶囊体中心
-	* 
+	* @param StartLocation      起始位置, 确保是角色中心位置
+	* @param StartTime			开始时间, 即动画数据计算的开始时间
+	* @param EndTime			动画数据计算结束的时间, 小于0意味着使用整个动画时长
+	* @param Rate				动画速率,同时也会影响整个RMS的速度,如动画时长1秒, Rate=2, 那么整个RMS时长就是0.5秒
+	* @param TargetLocation		最终的目标位置, 整个RootMotion运动会去适配这个位置
 	*/
-	UFUNCTION(BlueprintCallable, Category="RootMotionSource", meta = (AdvancedDisplay = "6"))
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource|Animation", meta = (AdvancedDisplay = "6"))
 	static bool ApplyRootMotionSource_AnimationAdjustment(UCharacterMovementComponent* MovementComponent,
 	                                                      UAnimSequence* DataAnimation,
-	                                                      FName InstanceName, int32 Priority, FVector TargetLocation,
+	                                                      FName InstanceName,
+	                                                      int32 Priority,
+	                                                      FVector StartLocation,
+	                                                      FVector TargetLocation,
 	                                                      bool bLocalTarget, bool bTargetBasedOnFoot = true,
 	                                                      float StartTime = 0,
 	                                                      float EndTime = -1.0, float Rate = 1.0,
@@ -250,6 +262,32 @@ public:
 	                                                      ERootMotionSourceApplyMode ApplyMode =
 		                                                      ERootMotionSourceApplyMode::None);
 
+	/**
+ **
+* 需要配置动画通知窗口, 通过WarpingTarget配置对应窗口的目标点信息,做到分阶段的运动适配,类似MotionWarping
+* <请确认位置是基于脚底还是角色中心>
+* @param DataAnimation      参考RootMotion数据的动画, 该节点本身不负责播放动画
+* @param WarpingTarget		需要与动画通知严格匹配
+* @param Tolerance	        允许动画通知窗口之间的公差, 小于此值即忽略不计
+* @param StartLocation      起始位置, 确保是角色中心位置
+* @param StartTime			开始时间, 即动画数据计算的开始时间
+* @param Rate				动画速率,同时也会影响整个RMS的速度,如动画时长1秒, Rate=2, 那么整个RMS时长就是0.5秒
+* @param bTargetBasedOnFoot 位置是基于脚底还是胶囊体中心
+*/
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource|Animation", meta = (AdvancedDisplay = "4"))
+	static bool ApplyRootMotionSource_AnimationWarping(UCharacterMovementComponent* MovementComponent,
+														  UAnimSequence* DataAnimation,
+														  FVector StartLocation,
+														  TMap<FName, FVector> WarpingTarget,
+														  float StartTime,
+														  FName InstanceName,
+														  int32 Priority,
+														  bool bTargetBasedOnFoot = true,
+														  float Rate = 1,
+														  float Tolerance = 0.01, 
+														  ERootMotionSourceApplyMode ApplyMode =
+															  ERootMotionSourceApplyMode::None);
+
 	static bool GetRootMotionSourceWindow(UAnimSequence* DataAnimation, FName InstanceName,
 	                                      FRootMotionSoueceWindowData& Window);
 	static bool GetRootMotionSourceWindows(UAnimSequence* DataAnimation, TArray<FRootMotionSoueceWindowData>& Windows);
@@ -258,6 +296,9 @@ public:
 
 	static bool FindTriggerDataByTime(const TArray<FRootMotionSoueceTriggerData>& TriggerData, float Time,
 	                                  FRootMotionSoueceTriggerData& OutData);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure,Category="RootMotionSource", meta = (AdvancedDisplay = "7"))
+	static FTransform ExtractRootMotion(UAnimSequenceBase* Anim , float StartTime, float EndTime) ;
 
 
 #pragma endregion Animation
@@ -336,40 +377,46 @@ public:
 	static float EvaluateFloatCurveAtFraction(const UCurveFloat& Curve, const float Fraction);
 	static FVector EvaluateVectorCurveAtFraction(const UCurveVector& Curve, const float Fraction);
 	/*
-	 * 根据时间获取正在运行的RMS的实时位置
+	 * 根据时间预测正在运行的RMS的实时位置
 	 */
 	UFUNCTION(BlueprintCallable, Category="RootMotionSource", BlueprintPure)
-	static bool GetRootMotionSourceLocation_Runtime(UCharacterMovementComponent* MovementComponent
+	static bool PredictRootMotionSourceLocation_Runtime(UCharacterMovementComponent* MovementComponent
 	                                                , FName InstanceName
 	                                                , float CurrentTime
 	                                                , FVector& OutLocation);
 	/**
-	* 根据时间获取MoveTo的位置
+	* 根据时间预测MoveTo的位置
 	* <位置是角色中心>
 	*/
 	UFUNCTION(BlueprintCallable, Category="RootMotionSource", BlueprintPure)
-	static bool GetRootMotionSourceLocation_MoveTo(FVector& OutLocation, UCharacterMovementComponent* MovementComponent,
+	static bool PredictRootMotionSourceLocation_MoveTo(FVector& OutLocation, UCharacterMovementComponent* MovementComponent,
 	                                               FVector StartLocation, FVector TargetLocation,
 	                                               float Duration,
 	                                               float CurrentTime, UCurveVector* PathOffsetCurve = nullptr);
 	/**
-	* 根据时间获取Jump的位置
+	* 根据时间预测Jump的位置
 	* <位置是角色中心>
 	*/
 	UFUNCTION(BlueprintCallable, Category="RootMotionSource", BlueprintPure)
-	static bool GetRootMotionSourceLocation_Jump(FVector& OutLocation, UCharacterMovementComponent* MovementComponent,
+	static bool PredictRootMotionSourceLocation_Jump(FVector& OutLocation, UCharacterMovementComponent* MovementComponent,
 	                                             FVector StartLocation, float Distance, float Height, FRotator Rotation,
 	                                             float Duration, float CurrentTime,
 	                                             UCurveVector* PathOffsetCurve = nullptr,
 	                                             UCurveFloat* TimeMappingCurve = nullptr);
 	/**
-* 根据时间获取MoveTo的位置
+* 根据时间预测位置
 * <位置是角色中心>
 */
 	UFUNCTION(BlueprintCallable, Category="RootMotionSource", BlueprintPure)
-	static bool GetRootMotionSourceLocation_MoveToParabola(FVector& OutLocation,
+	static bool PredictRootMotionSourceLocation_MoveToParabola(FVector& OutLocation,
 	                                                       UCharacterMovementComponent* MovementComponent,
 	                                                       FVector StartLocation, FVector TargetLocation,
 	                                                       float Duration,
-	                                                       float CurrentTime, UCurveVector* ParabolaCurve = nullptr);
+	                                                       float CurrentTime, UCurveFloat* ParabolaCurve = nullptr, UCurveFloat* TimeMappingCurve = nullptr);
+
+
+
+
 };
+
+
