@@ -478,7 +478,6 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationAdjustment(UCharac
                                                                          UAnimSequence* DataAnimation,
                                                                          FName InstanceName,
                                                                          int32 Priority,
-                                                                         FVector StartLocation,
                                                                          FVector TargetLocation,
                                                                          bool bLocalTarget,
                                                                          bool bTargetBasedOnFoot,
@@ -527,7 +526,6 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationAdjustment(UCharac
 	{
 		WorldTarget = TargetLocation - (bTargetBasedOnFoot ? FVector::ZeroVector : FVector(0, 0, HalfHeight));
 	}
-	const FVector FinalStartLocation = bTargetBasedOnFoot? (StartLocation +  FVector(0, 0, HalfHeight)) : StartLocation;
 	TSharedPtr<FRootMotionSource_AnimWarping_FinalPoint> RMS = MakeShared<FRootMotionSource_AnimWarping_FinalPoint>();
 	RMS->InstanceName = InstanceName == NAME_None ? TEXT("MotioWarping") : InstanceName;
 
@@ -535,7 +533,7 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationAdjustment(UCharac
 	RMS->Priority = NewPriority;
 	//这个目标必须是脚底位置
 	RMS->TargetLocation = WorldTarget;
-	RMS->StartLocation = FinalStartLocation;
+	RMS->StartLocation = CharacterTransform.GetLocation();
 	RMS->StartRotation = CharacterTransform.GetRotation().Rotator();
 	RMS->Duration = Duration;
 	RMS->bIgnoreZAxis = false;
@@ -1087,7 +1085,6 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationWarping_BM(
 
 bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationWarping(UCharacterMovementComponent* MovementComponent,
                                                                       UAnimSequence* DataAnimation,
-                                                                      FVector InStartLocation,
                                                                       TMap<FName, FVector> WarpingTarget,
                                                                       float StartTime,
                                                                       FName InstanceName,
@@ -1290,7 +1287,7 @@ bool URootMotionSourceLibrary::ApplyRootMotionSource_AnimationWarping(UCharacter
 	RMS->Priority = NewPriority;
 	//这个目标必须是脚底位置
 	RMS->TriggerDatas = TriggerDatas;
-	RMS->StartLocation = InStartLocation;
+	RMS->StartLocation = Character->GetActorLocation();
 	RMS->StartRotation = Character->GetActorRotation();
 	RMS->Duration = Duration;
 	RMS->bIgnoreZAxis = false;

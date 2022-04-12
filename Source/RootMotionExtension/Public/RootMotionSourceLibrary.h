@@ -109,14 +109,14 @@ public:
 
 #pragma region Animation
 	/**
-	* BM: BasedOnMoveTo, 即基于MoveTo,把动画信息烘焙成动态曲线
+	* BM: BasedOnMoveTo, 底层计算基于MoveTo, 开销会比非BM小,但是相对不太稳定
 	* 
 	* 直接使用动画的RootMotion数据,效果等同于播放RootMotion蒙太奇动画
 	* @param DataAnimation    参考RootMotion数据的动画, 该节点本身不负责播放动画
 	* @param EndTime		  播放的结束时间, 如果小于0,那么就使用最终的动画长度
 	* 
 	*/
-	UFUNCTION(BlueprintCallable, Category="RootMotionSource|DEPRECATED", meta = (AdvancedDisplay = "5"))
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource|Animation|BasedOnMoveTo", meta = (AdvancedDisplay = "5"))
 	static bool ApplyRootMotionSource_SimpleAnimation_BM(UCharacterMovementComponent* MovementComponent,
 	                                                     UAnimSequence* DataAnimation,
 	                                                     FName InstanceName,
@@ -147,7 +147,7 @@ public:
 
 
 	/**
-	 ** BM: BasedOnMoveTo, 即基于MoveTo,把动画信息烘焙成动态曲线
+	 ** BM: BasedOnMoveTo, 底层计算基于MoveTo, 开销会比非BM小,但是相对不太稳定
 	* 依据动画RootMotion数据适配目标点的运动,效果类似MotionWarping,  
 	* <请确认位置是基于脚底还是角色中心>
 	* @param DataAnimation      参考RootMotion数据的动画, 该节点本身不负责播放动画
@@ -155,7 +155,7 @@ public:
 	* @param bTargetBasedOnFoot 目标位置是基于脚底还是胶囊体中心
 	* 
 	*/
-	UFUNCTION(BlueprintCallable, Category="RootMotionSource|DEPRECATED", meta = (AdvancedDisplay = "6"))
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource|Animation|BasedOnMoveTo", meta = (AdvancedDisplay = "6"))
 	static bool ApplyRootMotionSource_AnimationAdjustment_BM(UCharacterMovementComponent* MovementComponent,
 	                                                         UAnimSequence* DataAnimation,
 	                                                         FName InstanceName, int32 Priority, FVector TargetLocation,
@@ -171,11 +171,11 @@ public:
 
 	/**
 	* 依据动画RootMotion数据适配目标点的运动,效果类似MotionWarping, 只需要设置一个最终的目标位置
+	* <注意: 此RMS是基于当前实时位置计算, 所以即使使用新的RMS覆盖旧的也会从当前实时位置继续执行而非跳转到之前的开始位置>
 	* <请确认位置是基于脚底还是角色中心>
 	* @param DataAnimation      参考RootMotion数据的动画, 该节点本身不负责播放动画
 	* @param bLocalTarget		如果为true,那么偏移信息是本地空间的
 	* @param bTargetBasedOnFoot 目标位置是基于脚底还是胶囊体中心
-	* @param StartLocation      起始位置, 确保是角色中心位置
 	* @param StartTime			开始时间, 即动画数据计算的开始时间
 	* @param EndTime			动画数据计算结束的时间, 小于0意味着使用整个动画时长
 	* @param Rate				动画速率,同时也会影响整个RMS的速度,如动画时长1秒, Rate=2, 那么整个RMS时长就是0.5秒
@@ -186,7 +186,6 @@ public:
 	                                                      UAnimSequence* DataAnimation,
 	                                                      FName InstanceName,
 	                                                      int32 Priority,
-	                                                      FVector StartLocation,
 	                                                      FVector TargetLocation,
 	                                                      bool bLocalTarget, bool bTargetBasedOnFoot = true,
 	                                                      float StartTime = 0,
@@ -196,13 +195,13 @@ public:
 
 
 	/**
-	 ** BM: BasedOnMoveTo, 即基于MoveTo,把动画信息烘焙成动态曲线
+	 ** BM: BasedOnMoveTo, 底层计算基于MoveTo, 开销会比非BM小,但是相对不太稳定
 	* 基于ApplyRootMotionSource_AnimationAdjustment, 通过动画帧来决定播放时段,  <位置偏移是基于脚底的>
 	* @param DataAnimation      参考RootMotion数据的动画, 该节点本身不负责播放动画
 	* @param TargetFram		    如果小于0那么使用最后一帧
 	* 
 	*/
-	UFUNCTION(BlueprintCallable, Category="RootMotionSource|DEPRECATED", meta = (AdvancedDisplay = "6"))
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource|Animation|BasedOnMoveTo", meta = (AdvancedDisplay = "6"))
 	static bool ApplyRootMotionSource_AnimationAdjustmentByFrame_BM(UCharacterMovementComponent* MovementComponent,
 	                                                                UAnimSequence* DataAnimation, FName InstanceName,
 	                                                                int32 Priority, FVector TargetLocation,
@@ -217,13 +216,13 @@ public:
 	                                                                ERootMotionSourceApplyMode ApplyMode =
 		                                                                ERootMotionSourceApplyMode::None);
 	/**
-	 ** BM: BasedOnMoveTo, 即基于MoveTo,把动画信息烘焙成动态曲线
+	 ** BM: BasedOnMoveTo, 底层计算基于MoveTo, 开销会比非BM小,但是相对不太稳定
 	* 基于ApplyRootMotionSource_AnimationAdjustment, 通过动画时间来决定播放时段,  <位置偏移是基于脚底的>
 	* @param DataAnimation      参考RootMotion数据的动画, 该节点本身不负责播放动画
 	* @param TargetTime		    如果小于0那么使用动画长度的时间
 	* 
 	*/
-	UFUNCTION(BlueprintCallable, Category="RootMotionSource|DEPRECATED", meta = (AdvancedDisplay = "6"))
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource|Animation|BasedOnMoveTo", meta = (AdvancedDisplay = "6"))
 	static bool ApplyRootMotionSource_AnimationAdjustmentByTime_BM(UCharacterMovementComponent* MovementComponent,
 	                                                               UAnimSequence* DataAnimation, FName InstanceName,
 	                                                               int32 Priority, FVector TargetLocation,
@@ -239,7 +238,7 @@ public:
 		                                                               ERootMotionSourceApplyMode::None);
 
 	/**
-	 ** BM: BasedOnMoveTo, 即基于MoveTo,把动画信息烘焙成动态曲线
+	 ** BM: BasedOnMoveTo, 底层计算基于MoveTo, 开销会比非BM小,但是相对不太稳定
 	* 需要配置动画通知窗口, 通过WarpingTarget配置对应窗口的目标点信息,做到分阶段的运动适配,类似MotionWarping
 	* <请确认位置是基于脚底还是角色中心>
 	* @param DataAnimation      参考RootMotion数据的动画, 该节点本身不负责播放动画
@@ -249,7 +248,7 @@ public:
 	* @param bExcludeEndAnimMotion 排除末尾的动画位移 
 	* @param bTargetBasedOnFoot 位置是基于脚底还是胶囊体中心
 	*/
-	UFUNCTION(BlueprintCallable, Category="RootMotionSource|DEPRECATED", meta = (AdvancedDisplay = "4"))
+	UFUNCTION(BlueprintCallable, Category="RootMotionSource|Animation|BasedOnMoveTo", meta = (AdvancedDisplay = "4"))
 	static bool ApplyRootMotionSource_AnimationWarping_BM(UCharacterMovementComponent* MovementComponent,
 	                                                      UAnimSequence* DataAnimation,
 	                                                      TMap<FName, FVector> WarpingTarget, FName InstanceName,
@@ -265,11 +264,11 @@ public:
 	/**
  **
 * 需要配置动画通知窗口, 通过WarpingTarget配置对应窗口的目标点信息,做到分阶段的运动适配,类似MotionWarping
+* <注意: 此RMS是基于当前实时位置计算, 所以即使使用新的RMS覆盖旧的也会从当前实时位置继续执行而非跳转到之前的开始位置>
 * <请确认位置是基于脚底还是角色中心>
 * @param DataAnimation      参考RootMotion数据的动画, 该节点本身不负责播放动画
 * @param WarpingTarget		需要与动画通知严格匹配
 * @param Tolerance	        允许动画通知窗口之间的公差, 小于此值即忽略不计
-* @param StartLocation      起始位置, 确保是角色中心位置
 * @param StartTime			开始时间, 即动画数据计算的开始时间
 * @param Rate				动画速率,同时也会影响整个RMS的速度,如动画时长1秒, Rate=2, 那么整个RMS时长就是0.5秒
 * @param bTargetBasedOnFoot 位置是基于脚底还是胶囊体中心
@@ -277,7 +276,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category="RootMotionSource|Animation", meta = (AdvancedDisplay = "4"))
 	static bool ApplyRootMotionSource_AnimationWarping(UCharacterMovementComponent* MovementComponent,
 														  UAnimSequence* DataAnimation,
-														  FVector StartLocation,
 														  TMap<FName, FVector> WarpingTarget,
 														  float StartTime,
 														  FName InstanceName,
