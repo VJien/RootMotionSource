@@ -297,8 +297,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure,Category="RMS", meta = (AdvancedDisplay = "7"))
 	static FTransform ExtractRootMotion(UAnimSequenceBase* Anim , float StartTime, float EndTime) ;
-	UFUNCTION(BlueprintCallable, BlueprintPure,Category="RMS", meta = (AdvancedDisplay = "7"))
-		static FTransform ProcessRootMotionInRange(const ACharacter* Character, UAnimSequenceBase* Anim, const FTransform& InRootMotion, float InPreviousTime, float InCurrentTime, FVector TargetLocation, bool bIgnoreZAxis);
+
 
 #pragma endregion Animation
 

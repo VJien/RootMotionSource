@@ -295,20 +295,16 @@ bool URMSLibrary::ApplyRootMotionSource_SimpleAnimation_BM(UCharacterMovementCom
 	//开始位置
 	FVector StartLocation = Character->GetActorLocation();
 	FRotator StartRotation = Character->GetActorRotation();
-	const FTransform StartChacterFootTransform = FTransform(StartRotation,
-																StartLocation - FVector(
-																	0.f, 0.f,
-																	Character->GetCapsuleComponent()->
-																			   GetScaledCapsuleHalfHeight()));	const FTransform MeshTransformWS = Character->GetMesh()->GetComponentTransform();
+	const FTransform StartChacterFootTransform = FTransform(StartRotation,StartLocation - FVector(0.f, 0.f, Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight()));
+	FTransform MeshTransformWS = Character->GetMesh()->GetComponentTransform();
 	FTransform Mesh2CharInverse = StartChacterFootTransform.GetRelativeTransform(MeshTransformWS);
-	// //模型与角色的相对变换矩阵,我们只需要Rotation
-	// FTransform Mesh2Char = Mesh->GetComponentTransform().GetRelativeTransform(Character->GetActorTransform());
-	// Mesh2Char.SetLocation(FVector::Zero());
-	FTransform RootMotion  = DataAnimation->ExtractRootMotionFromRange(StartTime, EndTime);
-	FTransform RootMotionWS = RootMotion * MeshTransformWS;
-	const FTransform FinalTargetTransformWS = Mesh2CharInverse * RootMotionWS;
-	
+	FTransform RootMotion = DataAnimation->ExtractRootMotionFromRange(StartTime, EndTime);
+	FTransform RootMotionWS = RootMotion * MeshTransformWS;//模型世界空间的RM
+	//通过逆矩阵把模型空间转换成actor空间
+	const FTransform  TargetTransformWS =  Mesh2CharInverse * RootMotionWS;
 
+	
+	
 	//用动态曲线的方式 , 而非静态,
 	UCurveVector* OffsetCV = NewObject<UCurveVector>();
 	FRichCurve CurveX, CurveY, CurveZ;
@@ -318,22 +314,22 @@ bool URMSLibrary::ApplyRootMotionSource_SimpleAnimation_BM(UCharacterMovementCom
 	 *计算动画与期望位置的比率
 	 *乘以之前的曲线偏移值得到最终的偏移值
 	 */
-	float LastTime = StartTime;
-	float CurrentTime = LastTime + FrameTime;
-	CurveX.AddKey( 0, 0);
-	CurveY.AddKey(0,0);
-	CurveZ.AddKey(0,0);
-	for ( ; CurrentTime <= EndTime; LastTime = CurrentTime, CurrentTime += FrameTime)
+	for (float CurrentTime = StartTime; CurrentTime <= EndTime; CurrentTime += FrameTime)
 	{
 		
 		float Fraction = (CurrentTime - StartTime) / Duration;
-		//获取当前时间的rootMotion
-		FTransform RootMotionDelta = DataAnimation->ExtractRootMotion(LastTime, CurrentTime, false);
-		FTransform WarpTransform = ProcessRootMotionInRange(Character, DataAnimation,RootMotionDelta, LastTime, CurrentTime, FinalTargetTransformWS.GetLocation(),false);
-
-		FVector AnimRootMotionLinearFraction = FinalTargetTransformWS.GetLocation() * Fraction;
+		const FTransform CurrFrameRootMotion = DataAnimation->ExtractRootMotion(0, CurrentTime, false);
+		const FTransform CurrFrameRootMotionWS = CurrFrameRootMotion * MeshTransformWS;
+		const FTransform  CurrFrameActorRootMotionWS =  Mesh2CharInverse * CurrFrameRootMotionWS;
+		//创建RMS空间矩阵
+		FRotator RMSRotation = UKismetMathLibrary::MakeRotFromXZ(TargetTransformWS.GetLocation() - StartChacterFootTransform.GetLocation(), FVector(0,0,1));
+		FTransform RMSSpaceTM {RMSRotation,StartChacterFootTransform.GetLocation()};
+		//将所需的位置信息转换至RMS空间
+		const FVector FinalTargetRMS = RMSSpaceTM.InverseTransformPosition(TargetTransformWS.GetLocation());
+		const FVector CurrFrameActorRootMotionRMS = RMSSpaceTM.InverseTransformPosition(CurrFrameActorRootMotionWS.GetLocation());
+		FVector AnimRootMotionLinearFraction = FinalTargetRMS * Fraction;
 		//动画位置与线性偏移位置的偏差
-		FVector CurveOffset = WarpTransform.GetLocation() - AnimRootMotionLinearFraction;
+		FVector CurveOffset = CurrFrameActorRootMotionRMS - AnimRootMotionLinearFraction;
 
 		CurveX.AddKey(CurrentTime / Duration / Rate, CurveOffset.X);
 		CurveY.AddKey(CurrentTime / Duration / Rate, CurveOffset.Y);
@@ -342,23 +338,24 @@ bool URMSLibrary::ApplyRootMotionSource_SimpleAnimation_BM(UCharacterMovementCom
 
 		if (RMS::CVarRMS_Debug.GetValueOnGameThread() == 1)
 		{
-			//动画线性每一帧位置
-			UKismetSystemLibrary::DrawDebugCapsule(
-				Mesh, AnimRootMotionLinearFraction,Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight(), Character->GetCapsuleComponent()->GetScaledCapsuleRadius(), FRotator::ZeroRotator, FColor::Yellow, 5.0);
-			//动画线性每一帧位置
-			UKismetSystemLibrary::DrawDebugCapsule(
-				Mesh, WarpTransform.GetLocation(),Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight(), Character->GetCapsuleComponent()->GetScaledCapsuleRadius(), FRotator::ZeroRotator, FColor::Yellow, 5.0);
+			//动画每一帧位置
+			UKismetSystemLibrary::DrawDebugCapsule(Character,CurrFrameActorRootMotionWS.GetLocation() + FVector(0,0,HalfHeight),
+				Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight(),Character->GetCapsuleComponent()->GetScaledCapsuleRadius(),
+				FRotator::ZeroRotator,FColor::Red,5,0.1);
+	
 		}
 	}
 	OffsetCV->FloatCurves[0] = CurveX;
 	OffsetCV->FloatCurves[1] = CurveY;
 	OffsetCV->FloatCurves[2] = CurveZ;
 
-	FVector WorldTarget = UKismetMathLibrary::TransformLocation(Character->GetActorTransform(), FinalTargetTransformWS.GetLocation());
+	FVector WorldTarget = TargetTransformWS.GetLocation() + FVector(0,0,HalfHeight);
 
+	FRMSSetting_Move Setting;
+	Setting.VelocityOnFinishMode = ERMSFinishVelocityMode::MaintainLastRootMotionVelocity;
 	FName InsName = InstanceName == NAME_None ? TEXT("SimpleAnimation") : InstanceName;
 	return ApplyRootMotionSource_MoveToForce(MovementComponent, InsName, StartLocation, WorldTarget,
-	                                         Duration / Rate, Priority, OffsetCV) >= 0;
+	                                         Duration / Rate, Priority, OffsetCV,StartTime,ERMSApplyMode::Replace,Setting) >= 0;
 }
 
 
@@ -1406,151 +1403,15 @@ FTransform URMSLibrary::ExtractRootMotion(UAnimSequenceBase* Anim, float StartTi
 	return OutTransform;
 }
 
-FTransform URMSLibrary::ProcessRootMotionInRange(const ACharacter* Character, UAnimSequenceBase* Animation,
-	const FTransform& InRootMotion, float InPreviousTime, float InCurrentTime, FVector TargetLocation,
-	bool bIgnoreZAxis)
-{
-	FTransform FinalRootMotion = InRootMotion;
-	if (!Animation || !Character)
-	{
-		return InRootMotion;
-	}
-	float EndTime = Animation->GetPlayLength();
-	
-	const FTransform RootMotionTotal = ExtractRootMotion(Animation, InPreviousTime, EndTime);
-	const FTransform RootMotionDelta = ExtractRootMotion(Animation, InPreviousTime, FMath::Min(InCurrentTime, EndTime));
-
-	if (!RootMotionDelta.GetTranslation().IsNearlyZero())
-	{
-		const FTransform CurrentTransform = FTransform(
-			Character->GetActorQuat(),
-			Character->GetActorLocation() - FVector(0.f, 0.f, Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight()));
-		//剩下的总共的RootMotion
-		const FTransform RootMotionTotalWorldSpace = CurrentTransform * Character->GetMesh()->ConvertLocalRootMotionToWorld(RootMotionTotal);
-		//这一帧的RootMotion
-		const FTransform RootMotionDeltaWorldSpace = Character->GetMesh()->ConvertLocalRootMotionToWorld(RootMotionDelta);
-		const FVector CurrentLocation = CurrentTransform.GetLocation();
-		const FQuat CurrentRotation = CurrentTransform.GetRotation();
-
-		
-		if (bIgnoreZAxis)
-		{
-			TargetLocation.Z = CurrentLocation.Z;
-		}
-		//这一帧的偏移
-		const FVector Translation = RootMotionDeltaWorldSpace.GetTranslation();
-		//总共剩下的动画RootMotion的偏移
-		const FVector FutureLocation = RootMotionTotalWorldSpace.GetLocation();
-		//当前位置到目标位置的偏移
-		const FVector CurrentToWorldOffset = TargetLocation - CurrentLocation;
-		//当前位置到动画RootMotion的偏移
-		const FVector CurrentToRootOffset = FutureLocation - CurrentLocation;
-
-
-		// 创建一个矩阵，我们可以用它把所有的东西放在一个空间中，直视RootMotionSyncPosition。“向前”应该是我们想要缩放的轴。
-		//todo 实际上就是找到当前运动做接近的一个轴向作为向前的轴
-		FVector ToRootNormalized = CurrentToRootOffset.GetSafeNormal();
-		float BestMatchDot = FMath::Abs(FVector::DotProduct(ToRootNormalized, CurrentRotation.GetAxisX()));
-		FMatrix ToRootSyncSpace = FRotationMatrix::MakeFromXZ(ToRootNormalized, CurrentRotation.GetAxisZ());
-
-		float ZDot = FMath::Abs(FVector::DotProduct(ToRootNormalized, CurrentRotation.GetAxisZ()));
-		if (ZDot > BestMatchDot)
-		{
-			ToRootSyncSpace = FRotationMatrix::MakeFromXZ(ToRootNormalized, CurrentRotation.GetAxisX());
-			BestMatchDot = ZDot;
-		}
-
-		float YDot = FMath::Abs(FVector::DotProduct(ToRootNormalized, CurrentRotation.GetAxisY()));
-		if (YDot > BestMatchDot)
-		{
-			ToRootSyncSpace = FRotationMatrix::MakeFromXZ(ToRootNormalized, CurrentRotation.GetAxisZ());
-		}
-
-		// 把所有偏移信息都放入这个空间中
-		const FVector RootMotionInSyncSpace = ToRootSyncSpace.InverseTransformVector(Translation);
-		const FVector CurrentToWorldSync = ToRootSyncSpace.InverseTransformVector(CurrentToWorldOffset);
-		const FVector CurrentToRootMotionSync = ToRootSyncSpace.InverseTransformVector(CurrentToRootOffset);
-
-		FVector CurrentToWorldSyncNorm = CurrentToWorldSync;
-		CurrentToWorldSyncNorm.Normalize();
-
-		FVector CurrentToRootMotionSyncNorm = CurrentToRootMotionSync;
-		CurrentToRootMotionSyncNorm.Normalize();
-
-		// 计算偏斜的角度Yaw
-		FVector FlatToWorld = FVector(CurrentToWorldSyncNorm.X, CurrentToWorldSyncNorm.Y, 0.0f);
-		FlatToWorld.Normalize();
-		FVector FlatToRoot = FVector(CurrentToRootMotionSyncNorm.X, CurrentToRootMotionSyncNorm.Y, 0.0f);
-		FlatToRoot.Normalize();
-		float AngleAboutZ = FMath::Acos(FVector::DotProduct(FlatToWorld, FlatToRoot));
-		float AngleAboutZNorm = FMath::DegreesToRadians(FRotator::NormalizeAxis(FMath::RadiansToDegrees(AngleAboutZ)));
-		if (FlatToWorld.Y < 0.0f)
-		{
-			AngleAboutZNorm *= -1.0f;
-		}
-
-		// 计算偏斜的角度Pitch
-		FVector ToWorldNoY = FVector(CurrentToWorldSyncNorm.X, 0.0f, CurrentToWorldSyncNorm.Z);
-		ToWorldNoY.Normalize();
-		FVector ToRootNoY = FVector(CurrentToRootMotionSyncNorm.X, 0.0f, CurrentToRootMotionSyncNorm.Z);
-		ToRootNoY.Normalize();
-		const float AngleAboutY = FMath::Acos(FVector::DotProduct(ToWorldNoY, ToRootNoY));
-		float AngleAboutYNorm = FMath::DegreesToRadians(FRotator::NormalizeAxis(FMath::RadiansToDegrees(AngleAboutY)));
-		if (ToWorldNoY.Z < 0.0f)
-		{
-			AngleAboutYNorm *= -1.0f;
-		}
-
-		FVector SkewedRootMotion = FVector::ZeroVector;
-		float ProjectedScale = FVector::DotProduct(CurrentToWorldSync, CurrentToRootMotionSyncNorm) / CurrentToRootMotionSync.Size();
-		if (ProjectedScale != 0.0f)
-		{
-			FMatrix ScaleMatrix;
-			ScaleMatrix.SetIdentity();
-			ScaleMatrix.SetAxis(0, FVector(ProjectedScale, 0.0f, 0.0f));
-			ScaleMatrix.SetAxis(1, FVector(0.0f, 1.0f, 0.0f));
-			ScaleMatrix.SetAxis(2, FVector(0.0f, 0.0f, 1.0f));
-
-			FMatrix ShearXAlongYMatrix;
-			ShearXAlongYMatrix.SetIdentity();
-			ShearXAlongYMatrix.SetAxis(0, FVector(1.0f, FMath::Tan(AngleAboutZNorm), 0.0f));
-			ShearXAlongYMatrix.SetAxis(1, FVector(0.0f, 1.0f, 0.0f));
-			ShearXAlongYMatrix.SetAxis(2, FVector(0.0f, 0.0f, 1.0f));
-
-			FMatrix ShearXAlongZMatrix;
-			ShearXAlongZMatrix.SetIdentity();
-			ShearXAlongZMatrix.SetAxis(0, FVector(1.0f, 0.0f, FMath::Tan(AngleAboutYNorm)));
-			ShearXAlongZMatrix.SetAxis(1, FVector(0.0f, 1.0f, 0.0f));
-			ShearXAlongZMatrix.SetAxis(2, FVector(0.0f, 0.0f, 1.0f));
-
-			FMatrix ScaledSkewMatrix = ScaleMatrix * ShearXAlongYMatrix * ShearXAlongZMatrix;
-
-			// Skew and scale the Root motion. 
-			SkewedRootMotion = ScaledSkewMatrix.TransformVector(RootMotionInSyncSpace);
-		}
-		else if (!CurrentToRootMotionSync.IsZero() && !CurrentToWorldSync.IsZero() && !RootMotionInSyncSpace.IsZero())
-		{
-			// Figure out ratio between remaining Root and remaining World. Then project scaled length of current Root onto World.
-			const float Scale = CurrentToWorldSync.Size() / CurrentToRootMotionSync.Size();
-			const float StepTowardTarget = RootMotionInSyncSpace.ProjectOnTo(RootMotionInSyncSpace).Size();
-			SkewedRootMotion = CurrentToWorldSyncNorm * (Scale * StepTowardTarget);
-		}
-
-		// Put our result back in world space.  
-		FinalRootMotion.SetTranslation(ToRootSyncSpace.TransformVector(SkewedRootMotion));
-	}
-	return FinalRootMotion;
-}
-
 bool URMSLibrary::ApplyRootMotionSource_SimpleAnimation(UCharacterMovementComponent* MovementComponent,
-                                                        UAnimSequence* DataAnimation,
-                                                        FName InstanceName,
-                                                        int32 Priority,
-                                                        float StartTime,
-                                                        float EndTime,
-                                                        float Rate,
-                                                        bool bIgnoreZAxis,
-                                                        ERMSApplyMode ApplyMode)
+                                                                     UAnimSequence* DataAnimation,
+                                                                     FName InstanceName,
+                                                                     int32 Priority,
+                                                                     float StartTime,
+                                                                     float EndTime,
+                                                                     float Rate,
+                                                                     bool bIgnoreZAxis,
+                                                                     ERMSApplyMode ApplyMode)
 {
 	if (!MovementComponent || !DataAnimation)
 	{
