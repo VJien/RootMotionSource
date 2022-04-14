@@ -294,14 +294,20 @@ bool URMSLibrary::ApplyRootMotionSource_SimpleAnimation_BM(UCharacterMovementCom
 	const float FrameTime = DataAnimation->GetPlayLength() / NumFrame;
 	//开始位置
 	FVector StartLocation = Character->GetActorLocation();
-	//模型与角色的相对变换矩阵,我们只需要Rotation
-	FTransform Mesh2Char = Mesh->GetComponentTransform().GetRelativeTransform(Character->GetActorTransform());
-	Mesh2Char.SetLocation(FVector::Zero());
-	FTransform RMT;
-
-	//获取RootMotion最终值, 即根骨的最大偏移量
-	RMT = DataAnimation->ExtractRootMotionFromRange(StartTime, EndTime);
-	RMT = RMT * Mesh2Char;
+	FRotator StartRotation = Character->GetActorRotation();
+	const FTransform StartChacterFootTransform = FTransform(StartRotation,
+																StartLocation - FVector(
+																	0.f, 0.f,
+																	Character->GetCapsuleComponent()->
+																			   GetScaledCapsuleHalfHeight()));	const FTransform MeshTransformWS = Character->GetMesh()->GetComponentTransform();
+	FTransform Mesh2CharInverse = StartChacterFootTransform.GetRelativeTransform(MeshTransformWS);
+	// //模型与角色的相对变换矩阵,我们只需要Rotation
+	// FTransform Mesh2Char = Mesh->GetComponentTransform().GetRelativeTransform(Character->GetActorTransform());
+	// Mesh2Char.SetLocation(FVector::Zero());
+	FTransform RootMotion  = DataAnimation->ExtractRootMotionFromRange(StartTime, EndTime);
+	FTransform RootMotionWS = RootMotion * MeshTransformWS;
+	const FTransform FinalTargetTransformWS = Mesh2CharInverse * RootMotionWS;
+	
 
 	//用动态曲线的方式 , 而非静态,
 	UCurveVector* OffsetCV = NewObject<UCurveVector>();
@@ -312,18 +318,22 @@ bool URMSLibrary::ApplyRootMotionSource_SimpleAnimation_BM(UCharacterMovementCom
 	 *计算动画与期望位置的比率
 	 *乘以之前的曲线偏移值得到最终的偏移值
 	 */
-	for (float CurrentTime = StartTime; CurrentTime <= EndTime; CurrentTime += FrameTime)
+	float LastTime = StartTime;
+	float CurrentTime = LastTime + FrameTime;
+	CurveX.AddKey( 0, 0);
+	CurveY.AddKey(0,0);
+	CurveZ.AddKey(0,0);
+	for ( ; CurrentTime <= EndTime; LastTime = CurrentTime, CurrentTime += FrameTime)
 	{
-		FTransform CurrFrameTM;
-
+		
 		float Fraction = (CurrentTime - StartTime) / Duration;
 		//获取当前时间的rootMotion
-		CurrFrameTM = DataAnimation->ExtractRootMotion(0, CurrentTime, false);
-		CurrFrameTM = CurrFrameTM * Mesh2Char;
+		FTransform RootMotionDelta = DataAnimation->ExtractRootMotion(LastTime, CurrentTime, false);
+		FTransform WarpTransform = ProcessRootMotionInRange(Character, DataAnimation,RootMotionDelta, LastTime, CurrentTime, FinalTargetTransformWS.GetLocation(),false);
 
-		FVector AnimRootMotionLinearFraction = RMT.GetLocation() * Fraction;
+		FVector AnimRootMotionLinearFraction = FinalTargetTransformWS.GetLocation() * Fraction;
 		//动画位置与线性偏移位置的偏差
-		FVector CurveOffset = CurrFrameTM.GetLocation() - AnimRootMotionLinearFraction;
+		FVector CurveOffset = WarpTransform.GetLocation() - AnimRootMotionLinearFraction;
 
 		CurveX.AddKey(CurrentTime / Duration / Rate, CurveOffset.X);
 		CurveY.AddKey(CurrentTime / Duration / Rate, CurveOffset.Y);
@@ -332,22 +342,19 @@ bool URMSLibrary::ApplyRootMotionSource_SimpleAnimation_BM(UCharacterMovementCom
 
 		if (RMS::CVarRMS_Debug.GetValueOnGameThread() == 1)
 		{
-			//动画每一帧位置
-			UKismetSystemLibrary::DrawDebugSphere(
-				Mesh, UKismetMathLibrary::TransformLocation(Character->GetActorTransform(), CurrFrameTM.GetLocation()) -
-				FVector(0, 0, HalfHeight), 5.0, 4, FColor::Yellow, 5.0);
 			//动画线性每一帧位置
-			UKismetSystemLibrary::DrawDebugSphere(
-				Mesh, UKismetMathLibrary::TransformLocation(Character->GetActorTransform(),
-				                                            AnimRootMotionLinearFraction) - FVector(0, 0, HalfHeight),
-				5.0, 4, FColor::Red, 5.0);
+			UKismetSystemLibrary::DrawDebugCapsule(
+				Mesh, AnimRootMotionLinearFraction,Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight(), Character->GetCapsuleComponent()->GetScaledCapsuleRadius(), FRotator::ZeroRotator, FColor::Yellow, 5.0);
+			//动画线性每一帧位置
+			UKismetSystemLibrary::DrawDebugCapsule(
+				Mesh, WarpTransform.GetLocation(),Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight(), Character->GetCapsuleComponent()->GetScaledCapsuleRadius(), FRotator::ZeroRotator, FColor::Yellow, 5.0);
 		}
 	}
 	OffsetCV->FloatCurves[0] = CurveX;
 	OffsetCV->FloatCurves[1] = CurveY;
 	OffsetCV->FloatCurves[2] = CurveZ;
 
-	FVector WorldTarget = UKismetMathLibrary::TransformLocation(Character->GetActorTransform(), RMT.GetLocation());
+	FVector WorldTarget = UKismetMathLibrary::TransformLocation(Character->GetActorTransform(), FinalTargetTransformWS.GetLocation());
 
 	FName InsName = InstanceName == NAME_None ? TEXT("SimpleAnimation") : InstanceName;
 	return ApplyRootMotionSource_MoveToForce(MovementComponent, InsName, StartLocation, WorldTarget,
