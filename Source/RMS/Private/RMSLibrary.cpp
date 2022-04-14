@@ -1399,15 +1399,151 @@ FTransform URMSLibrary::ExtractRootMotion(UAnimSequenceBase* Anim, float StartTi
 	return OutTransform;
 }
 
+FTransform URMSLibrary::ProcessRootMotionInRange(const ACharacter* Character, UAnimSequenceBase* Animation,
+	const FTransform& InRootMotion, float InPreviousTime, float InCurrentTime, FVector TargetLocation,
+	bool bIgnoreZAxis)
+{
+	FTransform FinalRootMotion = InRootMotion;
+	if (!Animation || !Character)
+	{
+		return InRootMotion;
+	}
+	float EndTime = Animation->GetPlayLength();
+	
+	const FTransform RootMotionTotal = ExtractRootMotion(Animation, InPreviousTime, EndTime);
+	const FTransform RootMotionDelta = ExtractRootMotion(Animation, InPreviousTime, FMath::Min(InCurrentTime, EndTime));
+
+	if (!RootMotionDelta.GetTranslation().IsNearlyZero())
+	{
+		const FTransform CurrentTransform = FTransform(
+			Character->GetActorQuat(),
+			Character->GetActorLocation() - FVector(0.f, 0.f, Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight()));
+		//剩下的总共的RootMotion
+		const FTransform RootMotionTotalWorldSpace = CurrentTransform * Character->GetMesh()->ConvertLocalRootMotionToWorld(RootMotionTotal);
+		//这一帧的RootMotion
+		const FTransform RootMotionDeltaWorldSpace = Character->GetMesh()->ConvertLocalRootMotionToWorld(RootMotionDelta);
+		const FVector CurrentLocation = CurrentTransform.GetLocation();
+		const FQuat CurrentRotation = CurrentTransform.GetRotation();
+
+		
+		if (bIgnoreZAxis)
+		{
+			TargetLocation.Z = CurrentLocation.Z;
+		}
+		//这一帧的偏移
+		const FVector Translation = RootMotionDeltaWorldSpace.GetTranslation();
+		//总共剩下的动画RootMotion的偏移
+		const FVector FutureLocation = RootMotionTotalWorldSpace.GetLocation();
+		//当前位置到目标位置的偏移
+		const FVector CurrentToWorldOffset = TargetLocation - CurrentLocation;
+		//当前位置到动画RootMotion的偏移
+		const FVector CurrentToRootOffset = FutureLocation - CurrentLocation;
+
+
+		// 创建一个矩阵，我们可以用它把所有的东西放在一个空间中，直视RootMotionSyncPosition。“向前”应该是我们想要缩放的轴。
+		//todo 实际上就是找到当前运动做接近的一个轴向作为向前的轴
+		FVector ToRootNormalized = CurrentToRootOffset.GetSafeNormal();
+		float BestMatchDot = FMath::Abs(FVector::DotProduct(ToRootNormalized, CurrentRotation.GetAxisX()));
+		FMatrix ToRootSyncSpace = FRotationMatrix::MakeFromXZ(ToRootNormalized, CurrentRotation.GetAxisZ());
+
+		float ZDot = FMath::Abs(FVector::DotProduct(ToRootNormalized, CurrentRotation.GetAxisZ()));
+		if (ZDot > BestMatchDot)
+		{
+			ToRootSyncSpace = FRotationMatrix::MakeFromXZ(ToRootNormalized, CurrentRotation.GetAxisX());
+			BestMatchDot = ZDot;
+		}
+
+		float YDot = FMath::Abs(FVector::DotProduct(ToRootNormalized, CurrentRotation.GetAxisY()));
+		if (YDot > BestMatchDot)
+		{
+			ToRootSyncSpace = FRotationMatrix::MakeFromXZ(ToRootNormalized, CurrentRotation.GetAxisZ());
+		}
+
+		// 把所有偏移信息都放入这个空间中
+		const FVector RootMotionInSyncSpace = ToRootSyncSpace.InverseTransformVector(Translation);
+		const FVector CurrentToWorldSync = ToRootSyncSpace.InverseTransformVector(CurrentToWorldOffset);
+		const FVector CurrentToRootMotionSync = ToRootSyncSpace.InverseTransformVector(CurrentToRootOffset);
+
+		FVector CurrentToWorldSyncNorm = CurrentToWorldSync;
+		CurrentToWorldSyncNorm.Normalize();
+
+		FVector CurrentToRootMotionSyncNorm = CurrentToRootMotionSync;
+		CurrentToRootMotionSyncNorm.Normalize();
+
+		// 计算偏斜的角度Yaw
+		FVector FlatToWorld = FVector(CurrentToWorldSyncNorm.X, CurrentToWorldSyncNorm.Y, 0.0f);
+		FlatToWorld.Normalize();
+		FVector FlatToRoot = FVector(CurrentToRootMotionSyncNorm.X, CurrentToRootMotionSyncNorm.Y, 0.0f);
+		FlatToRoot.Normalize();
+		float AngleAboutZ = FMath::Acos(FVector::DotProduct(FlatToWorld, FlatToRoot));
+		float AngleAboutZNorm = FMath::DegreesToRadians(FRotator::NormalizeAxis(FMath::RadiansToDegrees(AngleAboutZ)));
+		if (FlatToWorld.Y < 0.0f)
+		{
+			AngleAboutZNorm *= -1.0f;
+		}
+
+		// 计算偏斜的角度Pitch
+		FVector ToWorldNoY = FVector(CurrentToWorldSyncNorm.X, 0.0f, CurrentToWorldSyncNorm.Z);
+		ToWorldNoY.Normalize();
+		FVector ToRootNoY = FVector(CurrentToRootMotionSyncNorm.X, 0.0f, CurrentToRootMotionSyncNorm.Z);
+		ToRootNoY.Normalize();
+		const float AngleAboutY = FMath::Acos(FVector::DotProduct(ToWorldNoY, ToRootNoY));
+		float AngleAboutYNorm = FMath::DegreesToRadians(FRotator::NormalizeAxis(FMath::RadiansToDegrees(AngleAboutY)));
+		if (ToWorldNoY.Z < 0.0f)
+		{
+			AngleAboutYNorm *= -1.0f;
+		}
+
+		FVector SkewedRootMotion = FVector::ZeroVector;
+		float ProjectedScale = FVector::DotProduct(CurrentToWorldSync, CurrentToRootMotionSyncNorm) / CurrentToRootMotionSync.Size();
+		if (ProjectedScale != 0.0f)
+		{
+			FMatrix ScaleMatrix;
+			ScaleMatrix.SetIdentity();
+			ScaleMatrix.SetAxis(0, FVector(ProjectedScale, 0.0f, 0.0f));
+			ScaleMatrix.SetAxis(1, FVector(0.0f, 1.0f, 0.0f));
+			ScaleMatrix.SetAxis(2, FVector(0.0f, 0.0f, 1.0f));
+
+			FMatrix ShearXAlongYMatrix;
+			ShearXAlongYMatrix.SetIdentity();
+			ShearXAlongYMatrix.SetAxis(0, FVector(1.0f, FMath::Tan(AngleAboutZNorm), 0.0f));
+			ShearXAlongYMatrix.SetAxis(1, FVector(0.0f, 1.0f, 0.0f));
+			ShearXAlongYMatrix.SetAxis(2, FVector(0.0f, 0.0f, 1.0f));
+
+			FMatrix ShearXAlongZMatrix;
+			ShearXAlongZMatrix.SetIdentity();
+			ShearXAlongZMatrix.SetAxis(0, FVector(1.0f, 0.0f, FMath::Tan(AngleAboutYNorm)));
+			ShearXAlongZMatrix.SetAxis(1, FVector(0.0f, 1.0f, 0.0f));
+			ShearXAlongZMatrix.SetAxis(2, FVector(0.0f, 0.0f, 1.0f));
+
+			FMatrix ScaledSkewMatrix = ScaleMatrix * ShearXAlongYMatrix * ShearXAlongZMatrix;
+
+			// Skew and scale the Root motion. 
+			SkewedRootMotion = ScaledSkewMatrix.TransformVector(RootMotionInSyncSpace);
+		}
+		else if (!CurrentToRootMotionSync.IsZero() && !CurrentToWorldSync.IsZero() && !RootMotionInSyncSpace.IsZero())
+		{
+			// Figure out ratio between remaining Root and remaining World. Then project scaled length of current Root onto World.
+			const float Scale = CurrentToWorldSync.Size() / CurrentToRootMotionSync.Size();
+			const float StepTowardTarget = RootMotionInSyncSpace.ProjectOnTo(RootMotionInSyncSpace).Size();
+			SkewedRootMotion = CurrentToWorldSyncNorm * (Scale * StepTowardTarget);
+		}
+
+		// Put our result back in world space.  
+		FinalRootMotion.SetTranslation(ToRootSyncSpace.TransformVector(SkewedRootMotion));
+	}
+	return FinalRootMotion;
+}
+
 bool URMSLibrary::ApplyRootMotionSource_SimpleAnimation(UCharacterMovementComponent* MovementComponent,
-                                                                     UAnimSequence* DataAnimation,
-                                                                     FName InstanceName,
-                                                                     int32 Priority,
-                                                                     float StartTime,
-                                                                     float EndTime,
-                                                                     float Rate,
-                                                                     bool bIgnoreZAxis,
-                                                                     ERMSApplyMode ApplyMode)
+                                                        UAnimSequence* DataAnimation,
+                                                        FName InstanceName,
+                                                        int32 Priority,
+                                                        float StartTime,
+                                                        float EndTime,
+                                                        float Rate,
+                                                        bool bIgnoreZAxis,
+                                                        ERMSApplyMode ApplyMode)
 {
 	if (!MovementComponent || !DataAnimation)
 	{
