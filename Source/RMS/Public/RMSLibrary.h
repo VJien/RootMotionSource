@@ -160,14 +160,9 @@ public:
 	                                                         UAnimSequence* DataAnimation,
 	                                                         FName InstanceName, int32 Priority, FVector TargetLocation,
 	                                                         bool bLocalTarget, bool bTargetBasedOnFoot = true,
-	                                                         bool bUseCustomDuration = false,
-	                                                         float CustomDuration = 1.0, float AnimWarpingScale = 1.0,
-	                                                         ERMSAnimWarpingType WarpingType =
-		                                                         ERMSAnimWarpingType::BasedOnLength,
-	                                                         ERMSAnimWarpingAxis WarpingAxis =
-		                                                         ERMSAnimWarpingAxis::XYZ,
-	                                                         ERMSApplyMode ApplyMode =
-		                                                         ERMSApplyMode::None);
+	                                                         float StartTime = 0,
+	                                                         float EndTime = -1, float Rate = 1.0,
+	                                                         ERMSApplyMode ApplyMode = ERMSApplyMode::None);
 
 	/**
 	* 依据动画RootMotion数据适配目标点的运动,效果类似MotionWarping, 只需要设置一个最终的目标位置
@@ -194,48 +189,6 @@ public:
 		                                                      ERMSApplyMode::None);
 
 
-	/**
-	 ** BM: BasedOnMoveTo, 底层计算基于MoveTo, 开销会比非BM小,但是相对不太稳定
-	* 基于ApplyRootMotionSource_AnimationAdjustment, 通过动画帧来决定播放时段,  <位置偏移是基于脚底的>
-	* @param DataAnimation      参考RootMotion数据的动画, 该节点本身不负责播放动画
-	* @param TargetFram		    如果小于0那么使用最后一帧
-	* 
-	*/
-	UFUNCTION(BlueprintCallable, Category="RMS|Animation|BasedOnMoveTo", meta = (AdvancedDisplay = "6"))
-	static bool ApplyRootMotionSource_AnimationAdjustmentByFrame_BM(UCharacterMovementComponent* MovementComponent,
-	                                                                UAnimSequence* DataAnimation, FName InstanceName,
-	                                                                int32 Priority, FVector TargetLocation,
-	                                                                bool bLocalTarget, bool bTargetBasedOnFoot = true,
-	                                                                int32 FromFrame = 0,
-	                                                                int32 TargetFram = -1, float TimeScale = 1.0f,
-	                                                                float AnimWarpingScale = 1.0,
-	                                                                ERMSAnimWarpingType WarpingType =
-		                                                                ERMSAnimWarpingType::BasedOnLength,
-	                                                                ERMSAnimWarpingAxis WarpingAxis =
-		                                                                ERMSAnimWarpingAxis::XYZ,
-	                                                                ERMSApplyMode ApplyMode =
-		                                                                ERMSApplyMode::None);
-	/**
-	 ** BM: BasedOnMoveTo, 底层计算基于MoveTo, 开销会比非BM小,但是相对不太稳定
-	* 基于ApplyRootMotionSource_AnimationAdjustment, 通过动画时间来决定播放时段,  <位置偏移是基于脚底的>
-	* @param DataAnimation      参考RootMotion数据的动画, 该节点本身不负责播放动画
-	* @param TargetTime		    如果小于0那么使用动画长度的时间
-	* 
-	*/
-	UFUNCTION(BlueprintCallable, Category="RMS|Animation|BasedOnMoveTo", meta = (AdvancedDisplay = "6"))
-	static bool ApplyRootMotionSource_AnimationAdjustmentByTime_BM(UCharacterMovementComponent* MovementComponent,
-	                                                               UAnimSequence* DataAnimation, FName InstanceName,
-	                                                               int32 Priority, FVector TargetLocation,
-	                                                               bool bLocalTarget, bool bTargetBasedOnFoot = true,
-	                                                               float FromTime = 0,
-	                                                               int32 TargetTime = -1, float TimeScale = 1.0f,
-	                                                               float AnimWarpingScale = 1.0,
-	                                                               ERMSAnimWarpingType WarpingType =
-		                                                               ERMSAnimWarpingType::BasedOnLength,
-	                                                               ERMSAnimWarpingAxis WarpingAxis =
-		                                                               ERMSAnimWarpingAxis::XYZ,
-	                                                               ERMSApplyMode ApplyMode =
-		                                                               ERMSApplyMode::None);
 
 	/**
 	 ** BM: BasedOnMoveTo, 底层计算基于MoveTo, 开销会比非BM小,但是相对不太稳定
