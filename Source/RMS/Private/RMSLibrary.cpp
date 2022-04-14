@@ -295,14 +295,16 @@ bool URMSLibrary::ApplyRootMotionSource_SimpleAnimation_BM(UCharacterMovementCom
 	//开始位置
 	FVector StartLocation = Character->GetActorLocation();
 	FRotator StartRotation = Character->GetActorRotation();
-	const FTransform StartChacterFootTransform = FTransform(StartRotation,StartLocation - FVector(0.f, 0.f, Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight()));
-	FTransform MeshTransformWS = Character->GetMesh()->GetComponentTransform();
-	FTransform Mesh2CharInverse = StartChacterFootTransform.GetRelativeTransform(MeshTransformWS);
+	
+	const FTransform StartFootTransform = FTransform(StartRotation,StartLocation - FVector(0.f, 0.f, Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight()));
+	//FTransform MeshTransformWS = Character->GetMesh()->GetComponentTransform();
+	//FTransform Mesh2CharInverse = StartFootTransform.GetRelativeTransform(MeshTransformWS);
 	FTransform RootMotion = DataAnimation->ExtractRootMotionFromRange(StartTime, EndTime);
-	FTransform RootMotionWS = RootMotion * MeshTransformWS;//模型世界空间的RM
+	
+	//FTransform RootMotionWS = RootMotion * MeshTransformWS;//模型世界空间的RM
 	//通过逆矩阵把模型空间转换成actor空间
-	const FTransform  TargetTransformWS =  Mesh2CharInverse * RootMotionWS;
-
+	//const FTransform  TargetTransformWS =  Mesh2CharInverse * RootMotionWS;
+	const FTransform  TargetTransformWS = Mesh->ConvertLocalRootMotionToWorld(RootMotion);
 	
 	
 	//用动态曲线的方式 , 而非静态,
@@ -319,11 +321,13 @@ bool URMSLibrary::ApplyRootMotionSource_SimpleAnimation_BM(UCharacterMovementCom
 		
 		float Fraction = (CurrentTime - StartTime) / Duration;
 		const FTransform CurrFrameRootMotion = DataAnimation->ExtractRootMotion(0, CurrentTime, false);
-		const FTransform CurrFrameRootMotionWS = CurrFrameRootMotion * MeshTransformWS;
-		const FTransform  CurrFrameActorRootMotionWS =  Mesh2CharInverse * CurrFrameRootMotionWS;
+		//const FTransform CurrFrameRootMotionWS = CurrFrameRootMotion * MeshTransformWS;
+		//const FTransform  CurrFrameActorRootMotionWS =  Mesh2CharInverse * CurrFrameRootMotionWS;
+
+		const FTransform  CurrFrameActorRootMotionWS = Mesh->ConvertLocalRootMotionToWorld(CurrFrameRootMotion);
 		//创建RMS空间矩阵
-		FRotator RMSRotation = UKismetMathLibrary::MakeRotFromXZ(TargetTransformWS.GetLocation() - StartChacterFootTransform.GetLocation(), FVector(0,0,1));
-		FTransform RMSSpaceTM {RMSRotation,StartChacterFootTransform.GetLocation()};
+		FRotator RMSRotation = UKismetMathLibrary::MakeRotFromXZ(TargetTransformWS.GetLocation() - StartFootTransform.GetLocation(), FVector(0,0,1));
+		FTransform RMSSpaceTM {RMSRotation,StartFootTransform.GetLocation()};
 		//将所需的位置信息转换至RMS空间
 		const FVector FinalTargetRMS = RMSSpaceTM.InverseTransformPosition(TargetTransformWS.GetLocation());
 		const FVector CurrFrameActorRootMotionRMS = RMSSpaceTM.InverseTransformPosition(CurrFrameActorRootMotionWS.GetLocation());
@@ -386,36 +390,20 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationAdjustment_BM(
 	float DurationRatio = Duration / DataAnimation->GetPlayLength();
 	int32 NumFrame = DataAnimation->GetNumberOfSampledKeys();
 	const float FrameTime = DataAnimation->GetPlayLength() / NumFrame;
-	//获取本地偏移
-	FVector LocationOffset = FVector::ZeroVector;
-	if (bLocalTarget)
-	{
-		LocationOffset = TargetLocation + (bTargetBasedOnFoot ? FVector(0, 0, HalfHeight) : FVector::ZeroVector);
-	}
-	else
-	{
-		LocationOffset = UKismetMathLibrary::InverseTransformLocation(Character->GetActorTransform(), TargetLocation) +
-			(bTargetBasedOnFoot ? FVector(0, 0, HalfHeight) : FVector::ZeroVector);
-	}
-	//开始位置
+	
 	FVector StartLocation = Character->GetActorLocation();
-	//模型与角色的相对变换矩阵,我们只需要Rotation
-	FTransform Mesh2Char = Mesh->GetComponentTransform().GetRelativeTransform(Character->GetActorTransform());
-	Mesh2Char.SetLocation(FVector::Zero());
-
-	//获取RootMotion最终值, 即根骨的最大偏移量
-	FTransform RMT = DataAnimation->ExtractRootMotionFromRange(0, Duration);
-	RMT = RMT * Mesh2Char;
-	//获取所需的最后一帧，不一定要遍历所有
-	int32 LastFrame = bUseCustomDuration ? FMath::CeilToInt(NumFrame * DurationRatio) : NumFrame;
-
+	FRotator StartRotation = Character->GetActorRotation();
+	const FTransform StartFootTransform = FTransform(StartRotation,StartLocation - FVector(0.f, 0.f, Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight()));
+	FTransform RootMotion = DataAnimation->ExtractRootMotionFromRange(0, Duration);
+	const FTransform Mesh2Char = Mesh->GetComponentTransform().GetRelativeTransform(StartFootTransform);
+	const FTransform  TargetTransformWS = Mesh->ConvertLocalRootMotionToWorld(RootMotion);
+	const FVector TargetLocationActorSpace =( RootMotion * Mesh2Char).GetLocation();
 	//用动态曲线的方式 , 而非静态,
 	UCurveVector* OffsetCV = NewObject<UCurveVector>();
 	FRichCurve CurveX, CurveY, CurveZ;
-	float LastWindowEndTime = 0;
-	FVector WorldOffset = LocationOffset.X * Character->GetActorForwardVector() + LocationOffset.Y * Character->
-		GetActorRightVector() + LocationOffset.Z * Character->GetActorUpVector();
-	FVector WorldTarget = StartLocation + WorldOffset;
+	FVector WorldFootTarget = bTargetBasedOnFoot? TargetLocation: TargetLocation - FVector(0,0,HalfHeight);
+	WorldFootTarget = bLocalTarget? StartFootTransform.TransformPosition(TargetLocation): WorldFootTarget;
+	
 	/*
 	 *遍历每一帧获取当前动画的RootMotion位置,
 	 *减去线性当前帧的位置,得到了动画的曲线偏移值
@@ -424,21 +412,31 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationAdjustment_BM(
 	 */
 	for (float CurrentTime = 0; CurrentTime <= Duration; CurrentTime += FrameTime)
 	{
-		FTransform CurrFrameTM;
+	
 
 		float Fraction = CurrentTime / Duration;
-		float LastFraction = LastWindowEndTime / Duration;
 		//获取当前时间的rootMotion
-		CurrFrameTM = DataAnimation->ExtractRootMotion(0, CurrentTime, false);
+		const FTransform CurrFrameRootMotion = DataAnimation->ExtractRootMotion(0, CurrentTime, false);
+		const FTransform  CurrFrameActorRootMotionWS = Mesh->ConvertLocalRootMotionToWorld(CurrFrameRootMotion);
+		//创建RMS空间矩阵
+		FRotator RMSRotation = UKismetMathLibrary::MakeRotFromXZ(WorldFootTarget - StartFootTransform.GetLocation(), FVector(0,0,1));
+		FTransform RMSSpaceTM {RMSRotation,StartFootTransform.GetLocation()};
 
-		CurrFrameTM = CurrFrameTM * Mesh2Char;
-		FVector LocalLinearOffsetFraction = LocationOffset * Fraction;
-		FVector AnimRootMotionLinearFraction = RMT.GetLocation() * Fraction;
+		//将所需的位置信息转换至RMS空间
+		const FVector FinalTargetRMS = RMSSpaceTM.InverseTransformPosition(WorldFootTarget);
+		const FVector FinalActorRootMotionRMS = TargetLocationActorSpace;
+		const FVector CurrFrameActorRootMotionRMS = (CurrFrameRootMotion * Mesh2Char).GetLocation();
+		
+		FVector FinalTargetRMSLinearFraction = FinalTargetRMS * Fraction;
+		FVector FinalAnimRootMotionRMSLinearFraction = FinalActorRootMotionRMS * Fraction;
+		FVector CurrFrameRootMotion2Linear = CurrFrameActorRootMotionRMS - FinalAnimRootMotionRMSLinearFraction;
+		
+		const float Ratio = FinalAnimRootMotionRMSLinearFraction.Size() == 0? 0 :FinalTargetRMSLinearFraction.Size() / FinalAnimRootMotionRMSLinearFraction.Size();
+		
 		//动画位置与线性偏移位置的偏差
-		FVector CurveOffset = CurrFrameTM.GetLocation() - AnimRootMotionLinearFraction;
-		CalcAnimWarpingScale(CurveOffset, WarpingType, AnimRootMotionLinearFraction, LocalLinearOffsetFraction,
-		                     AnimWarpingScale);
-		ConvWorldOffsetToRmsSpace(CurveOffset, StartLocation, WorldTarget);
+		FVector CurveOffset = CurrFrameRootMotion2Linear * Ratio * AnimWarpingScale;
+
+
 		FiltAnimCurveOffsetAxisData(CurveOffset, WarpingAxis);
 
 		CurveX.AddKey(CurrentTime / Duration, CurveOffset.X);
@@ -449,31 +447,22 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationAdjustment_BM(
 		if (RMS::CVarRMS_Debug.GetValueOnGameThread() == 1)
 		{
 			//动画每一帧位置
-			UKismetSystemLibrary::DrawDebugSphere(
-				Mesh, UKismetMathLibrary::TransformLocation(Character->GetActorTransform(), CurrFrameTM.GetLocation()) -
-				FVector(0, 0, HalfHeight), 5.0, 4, FColor::Yellow, 5.0);
+			UKismetSystemLibrary::DrawDebugSphere(Mesh, CurrFrameActorRootMotionWS.GetLocation() + FVector(0, 0, HalfHeight), 5.0, 4, FColor::Yellow, 5.0);
 			//动画线性每一帧位置
-			UKismetSystemLibrary::DrawDebugSphere(
-				Mesh, UKismetMathLibrary::TransformLocation(Character->GetActorTransform(),
-				                                            AnimRootMotionLinearFraction) - FVector(0, 0, HalfHeight),
+			UKismetSystemLibrary::DrawDebugSphere(Mesh,  RMSSpaceTM.TransformPosition(FinalAnimRootMotionRMSLinearFraction) + FVector(0, 0, HalfHeight),
 				5.0, 4, FColor::Red, 5.0);
 			//期望每一帧位置
-			UKismetSystemLibrary::DrawDebugSphere(
-				Mesh, UKismetMathLibrary::TransformLocation(Character->GetActorTransform(), LocalLinearOffsetFraction) -
-				FVector(0, 0, HalfHeight), 5.0, 4, FColor::Green, 5.0);
+			UKismetSystemLibrary::DrawDebugSphere(Mesh, RMSSpaceTM.TransformPosition(FinalTargetRMSLinearFraction) + FVector(0, 0, HalfHeight), 5.0, 4, FColor::Green, 5.0);
 			//矫正后的每一帧位置
-			UKismetSystemLibrary::DrawDebugSphere(
-				Mesh, UKismetMathLibrary::TransformLocation(Character->GetActorTransform(),
-				                                            LocalLinearOffsetFraction + CurveOffset) - FVector(
-					0, 0, HalfHeight), 5.0, 4, FColor::Blue, 5.0);
+			UKismetSystemLibrary::DrawDebugSphere(Mesh, RMSSpaceTM.TransformPosition(FinalTargetRMSLinearFraction + CurveOffset) + FVector(0, 0, HalfHeight), 5.0, 4, FColor::Blue, 5.0);
 		}
-		LastWindowEndTime = CurrentTime;
+		
 	}
 	OffsetCV->FloatCurves[0] = CurveX;
 	OffsetCV->FloatCurves[1] = CurveY;
 	OffsetCV->FloatCurves[2] = CurveZ;
 	FName InsName = InstanceName == NAME_None ? TEXT("AnimationAdjustment") : InstanceName;
-	return ApplyRootMotionSource_MoveToForce(MovementComponent, InsName, StartLocation, WorldTarget, Duration,
+	return ApplyRootMotionSource_MoveToForce(MovementComponent, InsName, StartLocation, WorldFootTarget + FVector(0,0,HalfHeight), Duration,
 	                                         Priority, OffsetCV) >= 0;
 }
 
@@ -1107,7 +1096,7 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationWarping(UCharacterMovementCompo
 			                                               0.f, 0.f,
 			                                               Character->GetCapsuleComponent()->
 			                                                          GetScaledCapsuleHalfHeight()));
-		const FTransform StartChacterFootTransform = FTransform(StartRotation,
+		const FTransform StartFootTransform = FTransform(StartRotation,
 		                                                        StartLocation - FVector(
 			                                                        0.f, 0.f,
 			                                                        Character->GetCapsuleComponent()->
@@ -1118,7 +1107,7 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationWarping(UCharacterMovementCompo
 			                                                       Character->GetCapsuleComponent()->
 			                                                                  GetScaledCapsuleHalfHeight()));
 		FTransform MeshTransformWS = Character->GetMesh()->GetComponentTransform();
-		FTransform Mesh2CharInverse = StartChacterFootTransform.GetRelativeTransform(MeshTransformWS);
+		FTransform Mesh2CharInverse = StartFootTransform.GetRelativeTransform(MeshTransformWS);
 
 		RM = RM * MeshTransformWS; //模型世界空间的RM
 		//通过逆矩阵把模型空间转换成actor空间

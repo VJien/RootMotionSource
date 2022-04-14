@@ -369,10 +369,10 @@ void FRootMotionSource_AnimWarping::PrepareRootMotion(float SimulationTime, floa
 		const float CurrEndTime = (AnimEndTime < 0 || AnimEndTime > Animation->GetPlayLength()) ? Animation->GetPlayLength() : AnimEndTime;
 		const float CalcDuration = CurrEndTime - StartTime;
 		const float TimeScale = CalcDuration / Duration;
-		const FTransform StartChacterFootTransform = FTransform(StartRotation,StartLocation - FVector(0.f, 0.f, Character.GetCapsuleComponent()->GetScaledCapsuleHalfHeight()));
+		const FTransform StartFootTransform = FTransform(StartRotation,StartLocation - FVector(0.f, 0.f, Character.GetCapsuleComponent()->GetScaledCapsuleHalfHeight()));
 		const FTransform CurrChacterFootTransform = FTransform(StartRotation,Character.GetActorLocation() - FVector(0.f, 0.f, Character.GetCapsuleComponent()->GetScaledCapsuleHalfHeight()));
 		FTransform MeshTransformWS = Character.GetMesh()->GetComponentTransform();
-		FTransform Mesh2CharInverse = StartChacterFootTransform.GetRelativeTransform(MeshTransformWS);
+		FTransform Mesh2CharInverse = StartFootTransform.GetRelativeTransform(MeshTransformWS);
 		
 		FTransform TargetTransform = ExtractRootMotion(AnimStartTime, CurrEndTime);
 		TargetTransform = TargetTransform * MeshTransformWS;//模型世界空间的RM
@@ -524,10 +524,10 @@ void FRootMotionSource_AnimWarping_FinalPoint::PrepareRootMotion(float Simulatio
 		const float CurrEndTime = (AnimEndTime < 0 || AnimEndTime > Animation->GetPlayLength()) ? Animation->GetPlayLength() : AnimEndTime;
 		const float CalcDuration = CurrEndTime - StartTime;
 		const float TimeScale = CalcDuration / Duration;
-		const FTransform StartChacterFootTransform = FTransform(StartRotation,StartLocation - FVector(0.f, 0.f, Character.GetCapsuleComponent()->GetScaledCapsuleHalfHeight()));
+		const FTransform StartFootTransform = FTransform(StartRotation,StartLocation - FVector(0.f, 0.f, Character.GetCapsuleComponent()->GetScaledCapsuleHalfHeight()));
 		const FTransform CurrChacterFootTransform = FTransform(StartRotation,Character.GetActorLocation() - FVector(0.f, 0.f, Character.GetCapsuleComponent()->GetScaledCapsuleHalfHeight()));
 		FTransform MeshTransformWS = Character.GetMesh()->GetComponentTransform();
-		FTransform Mesh2CharInverse = StartChacterFootTransform.GetRelativeTransform(MeshTransformWS);
+		FTransform Mesh2CharInverse = StartFootTransform.GetRelativeTransform(MeshTransformWS);
 		
 		FTransform TargetTransform = ExtractRootMotion(AnimStartTime, CurrEndTime);
 		TargetTransform = TargetTransform * MeshTransformWS;//模型世界空间的RM
@@ -674,10 +674,10 @@ void FRootMotionSource_AnimWarping_MultiTargets::PrepareRootMotion(float Simulat
 		}
 
 		
-		const FTransform StartChacterFootTransform = FTransform(StartRotation,StartLocation - FVector(0.f, 0.f, Character.GetCapsuleComponent()->GetScaledCapsuleHalfHeight()));
+		const FTransform StartFootTransform = FTransform(StartRotation,StartLocation - FVector(0.f, 0.f, Character.GetCapsuleComponent()->GetScaledCapsuleHalfHeight()));
 		const FTransform CurrChacterFootTransform = FTransform(StartRotation,Character.GetActorLocation() - FVector(0.f, 0.f, Character.GetCapsuleComponent()->GetScaledCapsuleHalfHeight()));
 		FTransform MeshTransformWS = Character.GetMesh()->GetComponentTransform();
-		FTransform Mesh2CharInverse = StartChacterFootTransform.GetRelativeTransform(MeshTransformWS);
+		FTransform Mesh2CharInverse = StartFootTransform.GetRelativeTransform(MeshTransformWS);
 		FTransform RootMotionTargetTransform = ExtractRootMotion(RMStartTime, RMEndTime);
 		RootMotionTargetTransform = RootMotionTargetTransform * MeshTransformWS;//模型世界空间的RM
 		//通过逆矩阵把模型空间转换成actor空间
