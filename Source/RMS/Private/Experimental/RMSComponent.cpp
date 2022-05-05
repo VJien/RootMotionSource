@@ -66,28 +66,28 @@ void URMSComponent::Init(UCharacterMovementComponent* InMovementComponent)
 
 int32 URMSComponent::TryActivateTask(URMSTask_Base* Task)
 {
-	if (URMSTask_MoveTo* MoveTo = Cast<URMSTask_MoveTo>(Task))
-	{
-		if (!MoveTo->RootMotionComponent.IsValid())
-		{
-			OnTaskEnd.Broadcast(MoveTo,false);
-			return -1;
-		}
-		if (bListenTaskEnd /*&& !MoveTo->Setting.bForce*/ && URMSLibrary::IsRootMotionSourceValid(MoveTo->RootMotionComponent->GetMovementComponent(), MoveTo->GetInstanceName()))
-		{
-			OnTaskEnd.Broadcast(MoveTo,false);
-			return -1;
-		}
-		int32 ID = URMSLibrary::ApplyRootMotionSource_MoveToForce(MoveTo->RootMotionComponent->GetMovementComponent(), MoveTo->GetInstanceName(), MoveTo->StartLocation,MoveTo->TargetLocation,MoveTo->Duration,
-			MoveTo->Priority,MoveTo->PathOffsetCurve,0,ERMSApplyMode::None,MoveTo->Setting);
-		MoveTo->Activate();
-		if (bListenTaskEnd)
-		{
-			CurrentTasks.Emplace(ID, MoveTo);
-		}
-		OnTaskBegin.Broadcast(MoveTo);
-		return ID;
-	}
+	// if (URMSTask_MoveTo* MoveTo = Cast<URMSTask_MoveTo>(Task))
+	// {
+	// 	if (!MoveTo->RootMotionComponent.IsValid())
+	// 	{
+	// 		OnTaskEnd.Broadcast(MoveTo,false);
+	// 		return -1;
+	// 	}
+	// 	if (bListenTaskEnd /*&& !MoveTo->Setting.bForce*/ && URMSLibrary::IsRootMotionSourceValid(MoveTo->RootMotionComponent->GetMovementComponent(), MoveTo->GetInstanceName()))
+	// 	{
+	// 		OnTaskEnd.Broadcast(MoveTo,false);
+	// 		return -1;
+	// 	}
+	// 	int32 ID = URMSLibrary::ApplyRootMotionSource_MoveToForce(MoveTo->RootMotionComponent->GetMovementComponent(), MoveTo->GetInstanceName(), MoveTo->StartLocation,MoveTo->TargetLocation,MoveTo->Duration,
+	// 		MoveTo->Priority,MoveTo->PathOffsetCurve,0,ERMSApplyMode::None,MoveTo->Setting);
+	// 	MoveTo->Activate();
+	// 	if (bListenTaskEnd)
+	// 	{
+	// 		CurrentTasks.Emplace(ID, MoveTo);
+	// 	}
+	// 	OnTaskBegin.Broadcast(MoveTo);
+	// 	return ID;
+	// }
 	return -1;
 }
 

@@ -48,6 +48,27 @@ struct RMS_API FRootMotionSource_PathMoveToForce: public FRootMotionSource
 	
 };
 
+USTRUCT()
+struct RMS_API FRootMotionSource_MoveToForce_WithRotation: public FRootMotionSource_MoveToForce
+{
+	GENERATED_USTRUCT_BODY()
+	FRootMotionSource_MoveToForce_WithRotation();
+	virtual ~FRootMotionSource_MoveToForce_WithRotation() {}
+
+	virtual void PrepareRootMotion(
+		float SimulationTime, 
+		float MovementTickTime,
+		const ACharacter& Character, 
+		const UCharacterMovementComponent& MoveComponent
+		) override;
+	UPROPERTY()
+	UCurveFloat* RotationMappingCurve = nullptr;
+	UPROPERTY()
+	bool bFaceToTarget = true;
+	UPROPERTY()
+	FRotator StartRotation = FRotator::ZeroRotator;
+	
+};
 
 USTRUCT()
 struct RMS_API FRootMotionSource_AnimWarping: public FRootMotionSource

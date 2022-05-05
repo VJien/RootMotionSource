@@ -43,6 +43,8 @@ int32 URMSLibrary::ApplyRootMotionSource_MoveToForce(UCharacterMovementComponent
                                                                   int32 Priority,
                                                                   UCurveVector* PathOffsetCurve,
                                                                   float StartTime,
+                                                                  bool bFaceToTarget,
+                                                                  UCurveFloat* RotationCurve,
                                                                   ERMSApplyMode ApplyMode,
                                                                   FRMSSetting_Move Setting)
 {
@@ -55,8 +57,9 @@ int32 URMSLibrary::ApplyRootMotionSource_MoveToForce(UCharacterMovementComponent
 	{
 		return -1;
 	}
-	TSharedPtr<FRootMotionSource_MoveToForce> MoveToForce = MakeShared<FRootMotionSource_MoveToForce>();
-	MoveToForce->InstanceName = InstanceName == NAME_None ? TEXT("MoveTo") : InstanceName;
+	
+	TSharedPtr<FRootMotionSource_MoveToForce_WithRotation> MoveToForce = MakeShared<FRootMotionSource_MoveToForce_WithRotation>();
+	MoveToForce->InstanceName = InstanceName == NAME_None ? TEXT("MoveToForce") : InstanceName;
 	MoveToForce->AccumulateMode = Setting.AccumulateMod;
 	MoveToForce->Settings.SetFlag(
 		static_cast<ERootMotionSourceSettingsFlags>(static_cast<uint8>(Setting.SourcesSetting)));
@@ -71,7 +74,12 @@ int32 URMSLibrary::ApplyRootMotionSource_MoveToForce(UCharacterMovementComponent
 	MoveToForce->FinishVelocityParams.SetVelocity = Setting.FinishSetVelocity;
 	MoveToForce->FinishVelocityParams.ClampVelocity = Setting.FinishClampVelocity;
 	MoveToForce->SetTime(StartTime);
+	MoveToForce->StartRotation = MovementComponent->GetOwner()->GetActorRotation();
+	MoveToForce->bFaceToTarget = bFaceToTarget;
+	MoveToForce->RotationMappingCurve = RotationCurve;
 	return MovementComponent->ApplyRootMotionSource(MoveToForce);
+	
+
 }
 
 int32 URMSLibrary::ApplyRootMotionSource_JumpForce(UCharacterMovementComponent* MovementComponent,
@@ -353,7 +361,7 @@ bool URMSLibrary::ApplyRootMotionSource_SimpleAnimation_BM(UCharacterMovementCom
 	Setting.VelocityOnFinishMode = ERMSFinishVelocityMode::MaintainLastRootMotionVelocity;
 	FName InsName = InstanceName == NAME_None ? TEXT("SimpleAnimation") : InstanceName;
 	return ApplyRootMotionSource_MoveToForce(MovementComponent, InsName, StartLocation, WorldTarget,
-	                                         Duration / Rate, Priority, OffsetCV,StartTime,ERMSApplyMode::Replace,Setting) >= 0;
+	                                         Duration / Rate, Priority, OffsetCV,StartTime,true,nullptr,ERMSApplyMode::Replace,Setting) >= 0;
 }
 
 
@@ -468,7 +476,7 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationAdjustment_BM(
 	
 	
 	return ApplyRootMotionSource_MoveToForce(MovementComponent, InsName, StartLocation, WorldFootTarget + FVector(0,0,HalfHeight), Duration,
-	                                         Priority, OffsetCV,InStartTime) >= 0;
+	                                         Priority, OffsetCV,InStartTime,false) >= 0;
 }
 
 bool URMSLibrary::ApplyRootMotionSource_AnimationAdjustment(UCharacterMovementComponent* MovementComponent,
@@ -1214,15 +1222,16 @@ FTransform URMSLibrary::ExtractRootMotion(UAnimSequenceBase* Anim, float StartTi
 	return OutTransform;
 }
 
+
 bool URMSLibrary::ApplyRootMotionSource_SimpleAnimation(UCharacterMovementComponent* MovementComponent,
-                                                                     UAnimSequence* DataAnimation,
-                                                                     FName InstanceName,
-                                                                     int32 Priority,
-                                                                     float StartTime,
-                                                                     float EndTime,
-                                                                     float Rate,
-                                                                     bool bIgnoreZAxis,
-                                                                     ERMSApplyMode ApplyMode)
+                                                        UAnimSequence* DataAnimation,
+                                                        FName InstanceName,
+                                                        int32 Priority,
+                                                        float StartTime,
+                                                        float EndTime,
+                                                        float Rate,
+                                                        bool bIgnoreZAxis,
+                                                        ERMSApplyMode ApplyMode)
 {
 	if (!MovementComponent || !DataAnimation)
 	{

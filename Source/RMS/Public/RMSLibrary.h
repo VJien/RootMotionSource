@@ -24,6 +24,7 @@ public:
 	* 移动到一个点
 	* @param StartLocation      角色会基于此开始移动,所以请确保是Actor当前的Location
 	* @param TargetLocation		参考StartLocation的目标位置(要考虑HalfHeight)
+	* @param bFaceToTarget      是否逐步转向目标
 	* 
 	*/
 	UFUNCTION(BlueprintCallable, Category="RMS",
@@ -33,6 +34,8 @@ public:
 	                                               int32 Priority,
 	                                               UCurveVector* PathOffsetCurve = nullptr,
 	                                               float StartTime = 0,
+	                                               bool bFaceToTarget = false,
+	                                               UCurveFloat* RotationCurve = nullptr,
 	                                               ERMSApplyMode ApplyMode =
 		                                               ERMSApplyMode::None,
 	                                               FRMSSetting_Move ExtraSetting = {});
@@ -249,8 +252,7 @@ public:
 	                                  FRMSNotifyTriggerData& OutData);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure,Category="RMS", meta = (AdvancedDisplay = "7"))
-	static FTransform ExtractRootMotion(UAnimSequenceBase* Anim , float StartTime, float EndTime) ;
-
+	static FTransform ExtractRootMotion(UAnimSequenceBase* Anim , float StartTime, float EndTime);
 
 #pragma endregion Animation
 
