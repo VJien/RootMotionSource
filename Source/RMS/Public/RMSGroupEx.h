@@ -20,6 +20,8 @@ struct RMS_API FRootMotionSource_PathMoveToForce: public FRootMotionSource
 	FRotator StartRotation = FRotator::ZeroRotator;
 	UPROPERTY()
 	TArray<FRMSPathMoveToData> Path;
+
+	
 	FRMSPathMoveToData CurrData;
 	FRMSPathMoveToData LastData;
 	int32 Index = -1;
@@ -68,7 +70,7 @@ struct RMS_API FRootMotionSource_MoveToForce_WithRotation: public FRootMotionSou
 	UPROPERTY()
 	ERMSRotationMode RotationMode = ERMSRotationMode::None;
 	UPROPERTY()
-	FRotator Rotation = FRotator::ZeroRotator;	
+	FRotator TargetRotation = FRotator::ZeroRotator;	
 	UPROPERTY()
 	FRotator StartRotation = FRotator::ZeroRotator;
 	

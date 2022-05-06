@@ -259,7 +259,7 @@ void FRootMotionSource_MoveToForce_WithRotation::PrepareRootMotion(float Simulat
 			const FVector CurrentLocation = Character.GetActorLocation();
 			FVector Force = (CurrentTargetLocation - CurrentLocation) / MovementTickTime;
 			FRotator RotationDt;
-			FRotator TargetRotation = RotationMode == ERMSRotationMode::Custom? Rotation : (TargetLocation - StartLocation).Rotation();
+			TargetRotation = RotationMode == ERMSRotationMode::Custom? TargetRotation : (TargetLocation - StartLocation).Rotation();
 			URMSLibrary::ExtractRotation(RotationDt, Character, StartRotation, TargetRotation ,MoveFraction,RotationMappingCurve);
 				
 			if (bRestrictSpeedToExpected && !Force.IsNearlyZero(KINDA_SMALL_NUMBER))

@@ -213,7 +213,7 @@ struct FRMSNotifyTriggerData
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Defaults")
 	bool bHasTarget = false;
 
-	virtual bool operator ==(const FRMSNotifyTriggerData& other)
+	virtual bool operator ==(const FRMSNotifyTriggerData& other) const
 	{
 		return WindowData.AnimNotify == other.WindowData.AnimNotify &&
 			WindowData.EndTime == other.WindowData.EndTime &&
@@ -222,7 +222,7 @@ struct FRMSNotifyTriggerData
 			bHasTarget == other.bHasTarget;
 	}
 
-	virtual bool operator !=(const FRMSNotifyTriggerData& other)
+	virtual bool operator !=(const FRMSNotifyTriggerData& other) const
 	{
 		return !((*this) == other);
 	}

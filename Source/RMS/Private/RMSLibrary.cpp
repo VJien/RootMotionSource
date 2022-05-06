@@ -78,7 +78,7 @@ int32 URMSLibrary::ApplyRootMotionSource_MoveToForce(UCharacterMovementComponent
 	MoveToForce->SetTime(StartTime);
 	MoveToForce->StartRotation = MovementComponent->GetOwner()->GetActorRotation();
 	MoveToForce->RotationMode = RotationMode;
-	MoveToForce->Rotation = Rotation;
+	MoveToForce->TargetRotation = Rotation;
 	MoveToForce->RotationMappingCurve = RotationCurve;
 	return MovementComponent->ApplyRootMotionSource(MoveToForce);
 }
@@ -390,9 +390,19 @@ bool URMSLibrary::ApplyRootMotionSource_SimpleAnimation_BM(UCharacterMovementCom
 
 
 bool URMSLibrary::ApplyRootMotionSource_AnimationAdjustment_BM(
-	UCharacterMovementComponent* MovementComponent, UAnimSequence* DataAnimation,
-	FName InstanceName, int32 Priority, FVector TargetLocation,
-	bool bLocalTarget, bool bTargetBasedOnFoot, float InStartTime, float InEndTime, float Rate,
+																UCharacterMovementComponent* MovementComponent,
+																UAnimSequence* DataAnimation,
+																FName InstanceName,
+																int32 Priority,
+																FVector TargetLocation,
+																bool bLocalTarget,
+																bool bTargetBasedOnFoot,
+																ERMSRotationMode RotationMode,
+																FRotator TargetRotation,
+																UCurveFloat* RotationCurve,
+																float InStartTime,
+																float InEndTime,
+																float Rate,
 	ERMSApplyMode ApplyMode)
 {
 	if (!MovementComponent || !DataAnimation || InStartTime < 0 || (InEndTime > 0 && InEndTime <= InStartTime) || Rate
@@ -509,7 +519,7 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationAdjustment_BM(
 
 	return ApplyRootMotionSource_MoveToForce(MovementComponent, InsName, StartLocation,
 	                                         WorldFootTarget + FVector(0, 0, HalfHeight), Duration,
-	                                         Priority, OffsetCV, ERMSRotationMode::None,FRotator::ZeroRotator, nullptr, InStartTime) >= 0;
+	                                         Priority, OffsetCV, RotationMode,TargetRotation, RotationCurve, InStartTime) >= 0;
 }
 
 bool URMSLibrary::ApplyRootMotionSource_AnimationAdjustment(UCharacterMovementComponent* MovementComponent,

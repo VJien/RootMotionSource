@@ -35,7 +35,7 @@ public:
 	                                               int32 Priority,
 	                                               UCurveVector* PathOffsetCurve = nullptr,
 	                                               ERMSRotationMode RotationMode = ERMSRotationMode::None,
-														   FRotator Rotation =  FRotator::ZeroRotator,
+														   FRotator TargetRotation =  FRotator::ZeroRotator,
 												   UCurveFloat* RotationCurve = nullptr,
 	                                               float StartTime = 0,
 	                                               ERMSApplyMode ApplyMode =
@@ -67,7 +67,7 @@ public:
 	                                                      UCurveVector* PathOffsetCurve = nullptr,
 	                                                      UCurveFloat* TimeMappingCurve = nullptr,
 	                                                      ERMSRotationMode RotationMode = ERMSRotationMode::None,
-														   FRotator Rotation =  FRotator::ZeroRotator,
+														   FRotator TargetRotation =  FRotator::ZeroRotator,
 	                                                      UCurveFloat* RotationCurve = nullptr,
 	                                                      float StartTime = 0,
 	                                                      ERMSApplyMode ApplyMode =
@@ -92,7 +92,7 @@ public:
 	                                                        UCurveFloat* ParabolaCurve = nullptr,
 	                                                        UCurveFloat* TimeMappingCurve = nullptr,
 	                                                        ERMSRotationMode RotationMode = ERMSRotationMode::None,
-															FRotator Rotation =  FRotator::ZeroRotator,
+															FRotator TargetRotation =  FRotator::ZeroRotator,
 														    UCurveFloat* RotationCurve = nullptr,
 	                                                        int32 Segment = 8,
 	                                                        float StartTime = 0,
@@ -170,10 +170,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category="RMS|Animation|BasedOnMoveTo", meta = (AdvancedDisplay = "6"))
 	static bool ApplyRootMotionSource_AnimationAdjustment_BM(UCharacterMovementComponent* MovementComponent,
 	                                                         UAnimSequence* DataAnimation,
-	                                                         FName InstanceName, int32 Priority, FVector TargetLocation,
-	                                                         bool bLocalTarget, bool bTargetBasedOnFoot = true,
+	                                                         FName InstanceName,
+	                                                         int32 Priority,
+	                                                         FVector TargetLocation,
+	                                                         bool bLocalTarget,
+	                                                         bool bTargetBasedOnFoot = true,
+	                                                         ERMSRotationMode RotationMode = ERMSRotationMode::None,
+															FRotator TargetRotation =  FRotator::ZeroRotator,
+															UCurveFloat* RotationCurve = nullptr,
 	                                                         float StartTime = 0,
-	                                                         float EndTime = -1, float Rate = 1.0,
+	                                                         float EndTime = -1,
+	                                                         float Rate = 1.0,
 	                                                         ERMSApplyMode ApplyMode = ERMSApplyMode::None);
 
 	/**
