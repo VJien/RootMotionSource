@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "RMSTypes.h"
+#include "GameFramework/Character.h"
 #include "GameFramework/RootMotionSource.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "RMSLibrary.generated.h"
@@ -33,9 +34,9 @@ public:
 	                                               FVector StartLocation, FVector TargetLocation, float Duration,
 	                                               int32 Priority,
 	                                               UCurveVector* PathOffsetCurve = nullptr,
-	                                               float StartTime = 0,
 	                                               bool bFaceToTarget = false,
-	                                               UCurveFloat* RotationCurve = nullptr,
+												   UCurveFloat* RotationCurve = nullptr,
+	                                               float StartTime = 0,
 	                                               ERMSApplyMode ApplyMode =
 		                                               ERMSApplyMode::None,
 	                                               FRMSSetting_Move ExtraSetting = {});
@@ -64,6 +65,8 @@ public:
 	                                                      FVector TargetLocation, float Duration, int32 Priority,
 	                                                      UCurveVector* PathOffsetCurve = nullptr,
 	                                                      UCurveFloat* TimeMappingCurve = nullptr,
+	                                                      bool bFaceToTarget = false,
+	                                                      UCurveFloat* RotationCurve = nullptr,
 	                                                      float StartTime = 0,
 	                                                      ERMSApplyMode ApplyMode =
 		                                                      ERMSApplyMode::None,
@@ -290,7 +293,7 @@ public:
 	static void RemoveRootMotionSource(UCharacterMovementComponent* MovementComponent, FName InstanceName);
 	/*
 	 * 刷新DynamicMoveTo的持续时间
-	 * ********此方法有运动突变风险******** 
+	 * 新的时间不能小于当前已经运行的时间
 	*/
 	UFUNCTION(BlueprintCallable, Category="RMS", meta = (AdvancedDisplay = "7"))
 	static void UpdateDynamicMoveDuration(UCharacterMovementComponent* MovementComponent, FName InstanceName,
@@ -326,6 +329,7 @@ public:
 	static int32 CalcPriorityByApplyMode(UCharacterMovementComponent* MovementComponent, FName PendingInstanceName,
 	                                     int32 PendingPriorioty, ERMSApplyMode ApplyMode);
 
+	static bool ExtractRotation(FRotator& OutRotation, const ACharacter& Character, FRotator StartRotation, FRotator TargetRotation, float Fraction, UCurveFloat* RotationCurve = nullptr);
 
 	static float EvaluateFloatCurveAtFraction(const UCurveFloat& Curve, const float Fraction);
 	static FVector EvaluateVectorCurveAtFraction(const UCurveVector& Curve, const float Fraction);

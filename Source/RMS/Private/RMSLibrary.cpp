@@ -42,9 +42,9 @@ int32 URMSLibrary::ApplyRootMotionSource_MoveToForce(UCharacterMovementComponent
                                                                   float Duration,
                                                                   int32 Priority,
                                                                   UCurveVector* PathOffsetCurve,
-                                                                  float StartTime,
                                                                   bool bFaceToTarget,
                                                                   UCurveFloat* RotationCurve,
+                                                                  float StartTime,
                                                                   ERMSApplyMode ApplyMode,
                                                                   FRMSSetting_Move Setting)
 {
@@ -126,6 +126,8 @@ int32 URMSLibrary::ApplyRootMotionSource_DynamicMoveToForce(UCharacterMovementCo
                                                                          int32 Priority,
                                                                          UCurveVector* PathOffsetCurve,
                                                                          UCurveFloat* TimeMappingCurve,
+                                                                         bool bFaceToTarget ,
+																		 UCurveFloat* RotationCurve,
                                                                          float StartTime,
                                                                          ERMSApplyMode ApplyMode,
                                                                          FRMSSetting_Move Setting)
@@ -139,8 +141,8 @@ int32 URMSLibrary::ApplyRootMotionSource_DynamicMoveToForce(UCharacterMovementCo
 	{
 		return -1;
 	}
-	TSharedPtr<FRootMotionSource_MoveToDynamicForce> MoveToActorForce = MakeShared<
-		FRootMotionSource_MoveToDynamicForce>();
+	TSharedPtr<FRootMotionSource_MoveToDynamicForce_WithRotation> MoveToActorForce = MakeShared<
+		FRootMotionSource_MoveToDynamicForce_WithRotation>();
 	MoveToActorForce->InstanceName = InstanceName == NAME_None ? TEXT("DynamicMoveTo") : InstanceName;
 	MoveToActorForce->AccumulateMode = Setting.AccumulateMod;
 	MoveToActorForce->Settings.SetFlag(
@@ -158,6 +160,9 @@ int32 URMSLibrary::ApplyRootMotionSource_DynamicMoveToForce(UCharacterMovementCo
 	MoveToActorForce->FinishVelocityParams.SetVelocity = Setting.FinishSetVelocity;
 	MoveToActorForce->FinishVelocityParams.ClampVelocity = Setting.FinishClampVelocity;
 	MoveToActorForce->SetTime(StartTime);
+	MoveToActorForce->bFaceToTarget = bFaceToTarget;
+	MoveToActorForce->RotationMappingCurve = RotationCurve;
+	MoveToActorForce->StartRotation = MovementComponent->GetOwner()->GetActorRotation();
 	return MovementComponent->ApplyRootMotionSource(MoveToActorForce);
 }
 
@@ -361,7 +366,7 @@ bool URMSLibrary::ApplyRootMotionSource_SimpleAnimation_BM(UCharacterMovementCom
 	Setting.VelocityOnFinishMode = ERMSFinishVelocityMode::MaintainLastRootMotionVelocity;
 	FName InsName = InstanceName == NAME_None ? TEXT("SimpleAnimation") : InstanceName;
 	return ApplyRootMotionSource_MoveToForce(MovementComponent, InsName, StartLocation, WorldTarget,
-	                                         Duration / Rate, Priority, OffsetCV,StartTime,true,nullptr,ERMSApplyMode::Replace,Setting) >= 0;
+	                                         Duration / Rate, Priority, OffsetCV,true,nullptr,StartTime,ERMSApplyMode::Replace,Setting) >= 0;
 }
 
 
@@ -476,7 +481,7 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationAdjustment_BM(
 	
 	
 	return ApplyRootMotionSource_MoveToForce(MovementComponent, InsName, StartLocation, WorldFootTarget + FVector(0,0,HalfHeight), Duration,
-	                                         Priority, OffsetCV,InStartTime,false) >= 0;
+	                                         Priority, OffsetCV,false ,nullptr,InStartTime) >= 0;
 }
 
 bool URMSLibrary::ApplyRootMotionSource_AnimationAdjustment(UCharacterMovementComponent* MovementComponent,
@@ -1349,7 +1354,7 @@ void URMSLibrary::UpdateDynamicMoveToTarget(UCharacterMovementComponent* Movemen
 		{
 			return;
 		}
-		auto RMS_Dy = StaticCastSharedPtr<FRootMotionSource_MoveToDynamicForce>(RMS);
+		auto RMS_Dy = StaticCastSharedPtr<FRootMotionSource_MoveToDynamicForce_WithRotation>(RMS);
 		if (!RMS_Dy)
 		{
 			return;
@@ -1358,28 +1363,15 @@ void URMSLibrary::UpdateDynamicMoveToTarget(UCharacterMovementComponent* Movemen
 		{
 			return;
 		}
-
-		FVector oldTarget = RMS_Dy->TargetLocation;
-		FVector oldStart = RMS_Dy->StartLocation;
-		float friction = RMS_Dy->GetTime() / RMS_Dy->GetDuration();
-		FVector oldDir = (oldTarget - oldStart);
-		oldDir.Normalize();
-		FVector CurrPoint = oldStart + (oldTarget - oldStart) * friction;
-		//FVector p = MovementComponent->GetCharacterOwner()->GetActorLocation() - FVector(0,0,MovementComponent->GetCharacterOwner()->GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
-		FVector newDir = (NewTarget - CurrPoint);
-		newDir.Normalize();
-		FVector NewStart = CurrPoint + newDir * (-1) * (oldTarget - oldStart).Size() * friction;
-		RMS_Dy->StartLocation = NewStart;
+		//为了防止跳跃, 我们需要重新设定Start和Time
+		const float Time = RMS_Dy->GetTime();
+		const float Duration = RMS_Dy->GetDuration();
+		RMS_Dy->SetTime(0);
+		RMS_Dy->Duration = Duration - Time;
+		RMS_Dy->StartLocation = MovementComponent->GetOwner()->GetActorLocation();
+		RMS_Dy->StartRotation = MovementComponent->GetOwner()->GetActorRotation();
 		RMS_Dy->SetTargetLocation(NewTarget);
-		if (RMS::CVarRMS_Debug.GetValueOnGameThread() == 1)
-		{
-			UKismetSystemLibrary::DrawDebugSphere(MovementComponent, NewStart, 25, 4, FColor::Cyan, 5, 1);
-			UKismetSystemLibrary::DrawDebugSphere(MovementComponent, NewTarget, 25, 4, FColor::Cyan, 5, 1);
-			UKismetSystemLibrary::DrawDebugSphere(MovementComponent, oldStart, 25, 4, FColor::Red, 5, 1);
-			UKismetSystemLibrary::DrawDebugSphere(MovementComponent, oldTarget, 25, 4, FColor::Red, 5, 1);
-			UKismetSystemLibrary::DrawDebugSphere(MovementComponent, CurrPoint, 25, 4, FColor::Yellow, 5, 1);
-			//UKismetSystemLibrary::DrawDebugSphere(MovementComponent,p,25,4,FColor::White,5,1);
-		}
+
 	}
 }
 
@@ -1403,15 +1395,21 @@ void URMSLibrary::UpdateDynamicMoveDuration(UCharacterMovementComponent* Movemen
 		{
 			return;
 		}
-		auto RMS_Dy = StaticCastSharedPtr<FRootMotionSource_MoveToDynamicForce>(RMS);
+		auto RMS_Dy = StaticCastSharedPtr<FRootMotionSource_MoveToDynamicForce_WithRotation>(RMS);
 		if (!RMS_Dy)
 		{
 			return;
 		}
-		float ratio = RMS_Dy->CurrentTime / RMS_Dy->Duration;
-
-		RMS_Dy->Duration = NewDuration;
-		RMS_Dy->SetTime(NewDuration * ratio);
+		const float CurrTime = RMS_Dy->GetTime();
+		if (NewDuration <= CurrTime)
+		{
+			return;
+		}
+		RMS_Dy->Duration = NewDuration - CurrTime;
+		RMS_Dy->SetTime(0);
+		RMS_Dy->StartLocation = MovementComponent->GetOwner()->GetActorLocation();
+		RMS_Dy->StartRotation = MovementComponent->GetOwner()->GetActorRotation();
+	
 	}
 }
 
@@ -1611,8 +1609,27 @@ int32 URMSLibrary::CalcPriorityByApplyMode(UCharacterMovementComponent* Movement
 	return PendingPriorioty;
 }
 
+bool URMSLibrary::ExtractRotation(FRotator& OutRotation, const ACharacter& Character, FRotator StartRotation, FRotator TargetRotation,
+	float Fraction, UCurveFloat* RotationCurve)
+{
+	if (IsValid(&Character))
+	{
+		float RotationFraction = Fraction;
+		if (RotationCurve)
+		{
+			RotationFraction = FMath::Clamp(RotationCurve->GetFloatValue(RotationFraction), 0 , 1);
+		}
+		const float TargetYaw = TargetRotation.Yaw;
+		const float CurrentTargetYaw = FMath::Lerp<float, float>(StartRotation.Yaw, TargetYaw, RotationFraction);
+		const FRotator CurrentRotation = Character.GetActorRotation();
+		OutRotation =  FRotator{0,(CurrentTargetYaw - CurrentRotation.Yaw) ,0};
+		return true;
+	}
+	return false;
+}
+
 bool URMSLibrary::PredictRootMotionSourceLocation_Runtime(UCharacterMovementComponent* MovementComponent,
-                                                                   FName InstanceName, float Time, FVector& OutLocation)
+                                                          FName InstanceName, float Time, FVector& OutLocation)
 {
 	if (!MovementComponent)
 	{

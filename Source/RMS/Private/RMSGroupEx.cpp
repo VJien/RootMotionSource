@@ -235,20 +235,10 @@ void FRootMotionSource_MoveToForce_WithRotation::PrepareRootMotion(float Simulat
 			
 			FVector CurrentTargetLocation = FMath::Lerp<FVector, float>(StartLocation, TargetLocation, MoveFraction);
 			CurrentTargetLocation += GetPathOffsetInWorldSpace(MoveFraction);
-			float RotationFraction = MoveFraction;
-			if (RotationMappingCurve)
-			{
-				RotationFraction = FMath::Clamp(RotationMappingCurve->GetFloatValue(RotationFraction), 0 , 1);
-			}
-			const float TargetYaw = (TargetLocation - StartLocation).Rotation().Yaw;
-			const float CurrentTargetYaw = FMath::Lerp<float, float>(StartRotation.Yaw, TargetYaw, RotationFraction);
-			
-
 			const FVector CurrentLocation = Character.GetActorLocation();
-			const FRotator CurrentRotation = Character.GetActorRotation();
-
 			FVector Force = (CurrentTargetLocation - CurrentLocation) / MovementTickTime;
-			const FRotator RotationDt = FRotator{0,(CurrentTargetYaw - CurrentRotation.Yaw) ,0};
+			FRotator RotationDt;
+			URMSLibrary::ExtractRotation(RotationDt, Character, StartRotation,  (TargetLocation - StartLocation).Rotation(),MoveFraction,RotationMappingCurve);
 				
 			if (bRestrictSpeedToExpected && !Force.IsNearlyZero(KINDA_SMALL_NUMBER))
 			{
@@ -308,6 +298,90 @@ void FRootMotionSource_MoveToForce_WithRotation::PrepareRootMotion(float Simulat
 	{
 		FRootMotionSource_MoveToForce::PrepareRootMotion(SimulationTime, MovementTickTime, Character,
 														 MoveComponent);
+	}
+}
+
+void FRootMotionSource_MoveToDynamicForce_WithRotation::PrepareRootMotion(float SimulationTime, float MovementTickTime,
+	const ACharacter& Character, const UCharacterMovementComponent& MoveComponent)
+{
+	if (bFaceToTarget)
+	{
+		RootMotionParams.Clear();
+
+		if (Duration > SMALL_NUMBER && MovementTickTime > SMALL_NUMBER)
+		{
+			float MoveFraction = (GetTime() + SimulationTime) / Duration;
+			
+			if (TimeMappingCurve)
+			{
+				MoveFraction = URMSLibrary::EvaluateFloatCurveAtFraction(*TimeMappingCurve, MoveFraction);
+			}
+
+			FVector CurrentTargetLocation = FMath::Lerp<FVector, float>(StartLocation, TargetLocation, MoveFraction);
+			CurrentTargetLocation += GetPathOffsetInWorldSpace(MoveFraction);
+
+			const FVector CurrentLocation = Character.GetActorLocation();
+
+			FVector Force = (CurrentTargetLocation - CurrentLocation) / MovementTickTime;
+			
+			FRotator RotationDt;
+			URMSLibrary::ExtractRotation(RotationDt, Character, StartRotation,  (TargetLocation - StartLocation).Rotation(),MoveFraction,RotationMappingCurve);
+			
+			
+			if (bRestrictSpeedToExpected && !Force.IsNearlyZero(KINDA_SMALL_NUMBER))
+			{
+				// Calculate expected current location (if we didn't have collision and moved exactly where our velocity should have taken us)
+				float PreviousMoveFraction = GetTime() / Duration;
+				if (TimeMappingCurve)
+				{
+					PreviousMoveFraction = URMSLibrary::EvaluateFloatCurveAtFraction(*TimeMappingCurve, PreviousMoveFraction);
+				}
+
+				FVector CurrentExpectedLocation = FMath::Lerp<FVector, float>(StartLocation, TargetLocation, PreviousMoveFraction);
+				CurrentExpectedLocation += GetPathOffsetInWorldSpace(PreviousMoveFraction);
+
+				// Restrict speed to the expected speed, allowing some small amount of error
+				const FVector ExpectedForce = (CurrentTargetLocation - CurrentExpectedLocation) / MovementTickTime;
+				const float ExpectedSpeed = ExpectedForce.Size();
+				const float CurrentSpeedSqr = Force.SizeSquared();
+
+				const float ErrorAllowance = 0.5f; // in cm/s
+				if (CurrentSpeedSqr > FMath::Square(ExpectedSpeed + ErrorAllowance))
+				{
+					Force.Normalize();
+					Force *= ExpectedSpeed;
+				}
+			}
+
+			// Debug
+			#if ROOT_MOTION_DEBUG
+			if (RootMotionSourceDebug::CVarDebugRootMotionSources.GetValueOnGameThread() != 0)
+			{
+				const FVector LocDiff = MoveComponent.UpdatedComponent->GetComponentLocation() - CurrentLocation;
+				const float DebugLifetime = 2.0f;
+
+				// Current
+				DrawDebugCapsule(Character.GetWorld(), MoveComponent.UpdatedComponent->GetComponentLocation(), Character.GetSimpleCollisionHalfHeight(), Character.GetSimpleCollisionRadius(), FQuat::Identity, FColor::Red, false, DebugLifetime);
+
+				// Current Target
+				DrawDebugCapsule(Character.GetWorld(), CurrentTargetLocation + LocDiff, Character.GetSimpleCollisionHalfHeight(), Character.GetSimpleCollisionRadius(), FQuat::Identity, FColor::Green, false, DebugLifetime);
+
+				// Target
+				DrawDebugCapsule(Character.GetWorld(), TargetLocation + LocDiff, Character.GetSimpleCollisionHalfHeight(), Character.GetSimpleCollisionRadius(), FQuat::Identity, FColor::Blue, false, DebugLifetime);
+
+				// Force
+				DrawDebugLine(Character.GetWorld(), CurrentLocation, CurrentLocation+Force, FColor::Blue, false, DebugLifetime);
+			}
+	#endif
+
+			FTransform NewTransform(RotationDt,Force);
+			RootMotionParams.Set(NewTransform);
+		}
+		SetTime(GetTime() + SimulationTime);
+	}
+	else
+	{
+		FRootMotionSource_MoveToDynamicForce::PrepareRootMotion(SimulationTime, MovementTickTime, Character, MoveComponent);
 	}
 }
 #pragma endregion FRootMotionSource_PathMoveToForce
