@@ -29,12 +29,13 @@ public:
 	* 
 	*/
 	UFUNCTION(BlueprintCallable, Category="RMS",
-		meta = (AdvancedDisplay = "6", AutoCreateRefTerm = "ExtraSetting", CPP_Default_ExtraSetting))
+		meta = (AdvancedDisplay = "6", AutoCreateRefTerm = "ExtraSetting", CPP_Default_ExtraSetting, CPP_Default_Rotation))
 	static int32 ApplyRootMotionSource_MoveToForce(UCharacterMovementComponent* MovementComponent, FName InstanceName,
 	                                               FVector StartLocation, FVector TargetLocation, float Duration,
 	                                               int32 Priority,
 	                                               UCurveVector* PathOffsetCurve = nullptr,
-	                                               bool bFaceToTarget = false,
+	                                               ERMSRotationMode RotationMode = ERMSRotationMode::None,
+														   FRotator Rotation =  FRotator::ZeroRotator,
 												   UCurveFloat* RotationCurve = nullptr,
 	                                               float StartTime = 0,
 	                                               ERMSApplyMode ApplyMode =
@@ -59,13 +60,14 @@ public:
 	* 
 	*/
 	UFUNCTION(BlueprintCallable, Category="RMS",
-		meta = (AdvancedDisplay = "6", AutoCreateRefTerm = "ExtraSetting", CPP_Default_ExtraSetting))
+		meta = (AdvancedDisplay = "6", AutoCreateRefTerm = "ExtraSetting", CPP_Default_ExtraSetting, CPP_Default_Rotation))
 	static int32 ApplyRootMotionSource_DynamicMoveToForce(UCharacterMovementComponent* MovementComponent,
 	                                                      FName InstanceName, FVector StartLocation,
 	                                                      FVector TargetLocation, float Duration, int32 Priority,
 	                                                      UCurveVector* PathOffsetCurve = nullptr,
 	                                                      UCurveFloat* TimeMappingCurve = nullptr,
-	                                                      bool bFaceToTarget = false,
+	                                                      ERMSRotationMode RotationMode = ERMSRotationMode::None,
+														   FRotator Rotation =  FRotator::ZeroRotator,
 	                                                      UCurveFloat* RotationCurve = nullptr,
 	                                                      float StartTime = 0,
 	                                                      ERMSApplyMode ApplyMode =
@@ -81,7 +83,7 @@ public:
 	* 
 	*/
 	UFUNCTION(BlueprintCallable, Category="RMS",
-		meta = (AdvancedDisplay = "6", AutoCreateRefTerm = "ExtraSetting", CPP_Default_ExtraSetting))
+		meta = (AdvancedDisplay = "6", AutoCreateRefTerm = "ExtraSetting", CPP_Default_ExtraSetting, CPP_Default_Rotation))
 	static int32 ApplyRootMotionSource_MoveToForce_Parabola(UCharacterMovementComponent* MovementComponent,
 	                                                        FName InstanceName,
 	                                                        FVector StartLocation, FVector TargetLocation,
@@ -89,6 +91,9 @@ public:
 	                                                        int32 Priority,
 	                                                        UCurveFloat* ParabolaCurve = nullptr,
 	                                                        UCurveFloat* TimeMappingCurve = nullptr,
+	                                                        ERMSRotationMode RotationMode = ERMSRotationMode::None,
+															FRotator Rotation =  FRotator::ZeroRotator,
+														    UCurveFloat* RotationCurve = nullptr,
 	                                                        int32 Segment = 8,
 	                                                        float StartTime = 0,
 	                                                        ERMSApplyMode ApplyMode =
@@ -105,6 +110,7 @@ public:
 	static int32 ApplyRootMotionSource_PathMoveToForce(UCharacterMovementComponent* MovementComponent,
 	                                                   FName InstanceName,
 	                                                   FVector StartLocation,
+	                                                   FRotator StartRotation,
 	                                                   TArray<FRMSPathMoveToData> Path,
 	                                                   int32 Priority,
 	                                                   float StartTime = 0,
@@ -288,16 +294,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category="RMS", meta = (AdvancedDisplay = "7"))
 	static void UpdateDynamicMoveToTarget(UCharacterMovementComponent* MovementComponent, FName InstanceName,
 	                                      FVector NewTarget);
-	//移除RMS
-	UFUNCTION(BlueprintCallable, Category="RMS", meta = (AdvancedDisplay = "7"))
-	static void RemoveRootMotionSource(UCharacterMovementComponent* MovementComponent, FName InstanceName);
 	/*
 	 * 刷新DynamicMoveTo的持续时间
 	 * 新的时间不能小于当前已经运行的时间
 	*/
 	UFUNCTION(BlueprintCallable, Category="RMS", meta = (AdvancedDisplay = "7"))
 	static void UpdateDynamicMoveDuration(UCharacterMovementComponent* MovementComponent, FName InstanceName,
-	                                      float NewDuration);
+										  float NewDuration);
+	
+	//移除RMS
+	UFUNCTION(BlueprintCallable, Category="RMS", meta = (AdvancedDisplay = "7"))
+	static void RemoveRootMotionSource(UCharacterMovementComponent* MovementComponent, FName InstanceName);
+	
 	//获取RMS的时间信息
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="RMS", meta = (AdvancedDisplay = "7"))
 	static void GetCurrentRootMotionSourceTime(UCharacterMovementComponent* MovementComponent, FName InstanceName,

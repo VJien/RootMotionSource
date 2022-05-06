@@ -17,6 +17,8 @@ struct RMS_API FRootMotionSource_PathMoveToForce: public FRootMotionSource
 	UPROPERTY()
 	FVector StartLocation = FVector::ZeroVector;
 	UPROPERTY()
+	FRotator StartRotation = FRotator::ZeroRotator;
+	UPROPERTY()
 	TArray<FRMSPathMoveToData> Path;
 	FRMSPathMoveToData CurrData;
 	FRMSPathMoveToData LastData;
@@ -64,7 +66,9 @@ struct RMS_API FRootMotionSource_MoveToForce_WithRotation: public FRootMotionSou
 	UPROPERTY()
 	UCurveFloat* RotationMappingCurve = nullptr;
 	UPROPERTY()
-	bool bFaceToTarget = true;
+	ERMSRotationMode RotationMode = ERMSRotationMode::None;
+	UPROPERTY()
+	FRotator Rotation = FRotator::ZeroRotator;	
 	UPROPERTY()
 	FRotator StartRotation = FRotator::ZeroRotator;
 	
@@ -85,7 +89,9 @@ struct RMS_API FRootMotionSource_MoveToDynamicForce_WithRotation: public FRootMo
 	UPROPERTY()
 	UCurveFloat* RotationMappingCurve = nullptr;
 	UPROPERTY()
-	bool bFaceToTarget = true;
+	ERMSRotationMode RotationMode = ERMSRotationMode::None;
+	UPROPERTY()
+	FRotator Rotation = FRotator::ZeroRotator;												
 	UPROPERTY()
 	FRotator StartRotation = FRotator::ZeroRotator;
 	

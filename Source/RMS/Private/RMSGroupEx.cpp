@@ -82,10 +82,13 @@ void FRootMotionSource_PathMoveToForce::PrepareRootMotion(float SimulationTime, 
 	}
 	if (Duration > SMALL_NUMBER && MovementTickTime > SMALL_NUMBER)
 	{
+		
 		const float NextFrame = (GetTime() + SimulationTime);
 		if (Index == -1)
 		{
 			LastData.Target = StartLocation;
+			LastData.Rotation = StartRotation;
+		
 			CurrData = Path[0];
 			Index = 0;
 		}
@@ -96,6 +99,7 @@ void FRootMotionSource_PathMoveToForce::PrepareRootMotion(float SimulationTime, 
 				Index ++;
 				LastData = CurrData;
 				CurrData = Path[Index];
+				LastData.Rotation = Character.GetActorRotation();
 			}
 		}
 		float MoveFraction = (NextFrame - LastData.Duration) / CurrData.Duration;
@@ -105,12 +109,29 @@ void FRootMotionSource_PathMoveToForce::PrepareRootMotion(float SimulationTime, 
 		}
 		FVector CurrentTargetLocation = FMath::Lerp<FVector, float>(LastData.Target, CurrData.Target, MoveFraction);
 		CurrentTargetLocation += GetPathOffsetInWorldSpace(MoveFraction, CurrData, LastData.Target);
-
 		const FVector CurrentLocation = Character.GetActorLocation();
-
 		FVector Force = (CurrentTargetLocation - CurrentLocation) / MovementTickTime;
-
-
+		
+		FRotator RotationDt = FRotator::ZeroRotator;
+		if (CurrData.RotationMode!= ERMSRotationMode::None)
+		{
+			FRotator TargetRotation;
+			if (CurrData.RotationMode == ERMSRotationMode::FaceToTarget)
+			{
+				TargetRotation = (CurrData.Target - LastData.Target).Rotation();
+			}
+			else
+			{
+				TargetRotation = CurrData.Rotation;
+			}
+		
+			URMSLibrary::ExtractRotation(RotationDt, Character, LastData.Rotation, TargetRotation, MoveFraction,CurrData.RotationCurve);
+		}
+		
+		
+		
+		
+			
 		// Debug
 #if ROOT_MOTION_DEBUG
 		if (RMS::CVarRMS_Debug.GetValueOnGameThread() != 0)
@@ -138,7 +159,7 @@ void FRootMotionSource_PathMoveToForce::PrepareRootMotion(float SimulationTime, 
 		}
 #endif
 
-		FTransform NewTransform(Force);
+		FTransform NewTransform(RotationDt,Force);
 		RootMotionParams.Set(NewTransform);
 	}
 	else
@@ -183,7 +204,7 @@ bool FRootMotionSource_PathMoveToForce::Matches(const FRootMotionSource* Other) 
 	const FRootMotionSource_PathMoveToForce* OtherCast = static_cast<const FRootMotionSource_PathMoveToForce*>(Other);
 
 	return StartLocation == OtherCast->StartLocation &&
-		Path == OtherCast->Path;
+		Path == OtherCast->Path && StartRotation == OtherCast->StartRotation;
 }
 
 bool FRootMotionSource_PathMoveToForce::MatchesAndHasSameState(const FRootMotionSource* Other) const
@@ -225,7 +246,7 @@ void FRootMotionSource_MoveToForce_WithRotation::PrepareRootMotion(float Simulat
                                                                    const ACharacter& Character,
                                                                    const UCharacterMovementComponent& MoveComponent)
 {
-	if (bFaceToTarget)
+	if (RotationMode != ERMSRotationMode::None)
 	{
 		RootMotionParams.Clear();
 	
@@ -238,7 +259,8 @@ void FRootMotionSource_MoveToForce_WithRotation::PrepareRootMotion(float Simulat
 			const FVector CurrentLocation = Character.GetActorLocation();
 			FVector Force = (CurrentTargetLocation - CurrentLocation) / MovementTickTime;
 			FRotator RotationDt;
-			URMSLibrary::ExtractRotation(RotationDt, Character, StartRotation,  (TargetLocation - StartLocation).Rotation(),MoveFraction,RotationMappingCurve);
+			FRotator TargetRotation = RotationMode == ERMSRotationMode::Custom? Rotation : (TargetLocation - StartLocation).Rotation();
+			URMSLibrary::ExtractRotation(RotationDt, Character, StartRotation, TargetRotation ,MoveFraction,RotationMappingCurve);
 				
 			if (bRestrictSpeedToExpected && !Force.IsNearlyZero(KINDA_SMALL_NUMBER))
 			{
@@ -304,7 +326,7 @@ void FRootMotionSource_MoveToForce_WithRotation::PrepareRootMotion(float Simulat
 void FRootMotionSource_MoveToDynamicForce_WithRotation::PrepareRootMotion(float SimulationTime, float MovementTickTime,
 	const ACharacter& Character, const UCharacterMovementComponent& MoveComponent)
 {
-	if (bFaceToTarget)
+	if ( RotationMode!= ERMSRotationMode::None)
 	{
 		RootMotionParams.Clear();
 
@@ -325,7 +347,8 @@ void FRootMotionSource_MoveToDynamicForce_WithRotation::PrepareRootMotion(float 
 			FVector Force = (CurrentTargetLocation - CurrentLocation) / MovementTickTime;
 			
 			FRotator RotationDt;
-			URMSLibrary::ExtractRotation(RotationDt, Character, StartRotation,  (TargetLocation - StartLocation).Rotation(),MoveFraction,RotationMappingCurve);
+			FRotator TargetRotation = RotationMode == ERMSRotationMode::Custom? Rotation : (TargetLocation - StartLocation).Rotation();
+			URMSLibrary::ExtractRotation(RotationDt, Character, StartRotation, TargetRotation ,MoveFraction,RotationMappingCurve);
 			
 			
 			if (bRestrictSpeedToExpected && !Force.IsNearlyZero(KINDA_SMALL_NUMBER))

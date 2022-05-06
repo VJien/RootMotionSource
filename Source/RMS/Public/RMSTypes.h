@@ -86,6 +86,15 @@ enum class ERMSSourceSettingsFlags : uint8
 };
 
 
+UENUM(BlueprintType)
+enum class ERMSRotationMode : uint8
+{
+	None,
+	FaceToTarget,
+	Custom
+};
+
+
 USTRUCT(BlueprintType)
 struct FRMSPathMoveToData
 {
@@ -99,16 +108,24 @@ public:
 	TObjectPtr<UCurveVector> PathOffsetCurve = nullptr;
 	UPROPERTY(BlueprintReadWrite)
 	TObjectPtr<UCurveFloat> TimeMappingCurve = nullptr;
+	
+	UPROPERTY(BlueprintReadWrite)
+	ERMSRotationMode RotationMode = ERMSRotationMode::None;
+	UPROPERTY(BlueprintReadWrite)
+	FRotator Rotation =  FRotator::ZeroRotator;
+	UPROPERTY(BlueprintReadWrite)
+	TObjectPtr<UCurveFloat> RotationCurve = nullptr;
 
 	friend FArchive& operator <<(FArchive& Ar, FRMSPathMoveToData& D)
 	{
-		return Ar << D.Duration << D.Target << D.PathOffsetCurve << D.TimeMappingCurve;
+		return Ar << D.Duration << D.Target << D.PathOffsetCurve << D.TimeMappingCurve << D.RotationMode << D.Rotation << D.RotationCurve;
 	}
 
 	virtual bool operator==(const FRMSPathMoveToData& Other) const
 	{
 		return Target == Other.Target && Duration == Other.Duration && PathOffsetCurve == Other.PathOffsetCurve &&
-			TimeMappingCurve == Other.TimeMappingCurve;
+			TimeMappingCurve == Other.TimeMappingCurve && RotationMode == Other.RotationMode && Rotation == Other.Rotation
+		&& RotationCurve == Other.RotationCurve;
 	}
 
 	virtual bool operator!=(const FRMSPathMoveToData& Other) const
