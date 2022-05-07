@@ -235,7 +235,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category="RMS|Animation", meta = (AdvancedDisplay = "4"))
 	static bool ApplyRootMotionSource_AnimationWarping(UCharacterMovementComponent* MovementComponent,
 														  UAnimSequence* DataAnimation,
-														  TMap<FName, FVector> WarpingTarget,
+														  TMap<FName, FRMSAnimWarppingConfig> WarpingTarget,
 														  float StartTime,
 														  FName InstanceName,
 														  int32 Priority,

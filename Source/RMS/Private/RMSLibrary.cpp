@@ -960,7 +960,7 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationWarping_BM(
 
 bool URMSLibrary::ApplyRootMotionSource_AnimationWarping(UCharacterMovementComponent* MovementComponent,
                                                          UAnimSequence* DataAnimation,
-                                                         TMap<FName, FVector> WarpingTarget,
+                                                         TMap<FName, FRMSAnimWarppingConfig> WarpingTarget,
                                                          float StartTime,
                                                          FName InstanceName,
                                                          int32 Priority,
@@ -996,6 +996,7 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationWarping(UCharacterMovementCompo
 		//通过逆矩阵把模型空间转换成actor空间
 		const FTransform TargetTransformWS = Mesh2CharInverse * RM;
 		Data.Target = TargetTransformWS.GetLocation();
+		
 	};
 
 	if (!MovementComponent || !DataAnimation || WarpingTarget.Num() == 0 || Rate <= 0 || StartTime > DataAnimation->
@@ -1040,10 +1041,9 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationWarping(UCharacterMovementCompo
 		{
 			TriggerData.StartTime = Windows[Windows.Num() - 1].EndTime;
 			TriggerData.EndTime = AnimLength;
-			const auto Target = WarpingTarget.Find(Windows[Windows.Num() - 1].AnimNotify->RootMotionSourceTarget);
-			if (Target)
+			if (const FRMSAnimWarppingConfig* Target = WarpingTarget.Find(Windows[Windows.Num() - 1].AnimNotify->RootMotionSourceTarget))
 			{
-				EmplaceTriggerDataTargetWithAnimRootMotion_Lambda(Character, TriggerData, *Target,
+				EmplaceTriggerDataTargetWithAnimRootMotion_Lambda(Character, TriggerData, (*Target).TargetLocation,
 				                                                  Character->GetActorRotation());
 				break;
 			}
@@ -1061,14 +1061,15 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationWarping(UCharacterMovementCompo
 		{
 			TriggerData.StartTime = 0;
 			TriggerData.EndTime = Windows[0].EndTime;
-			const auto Target = WarpingTarget.Find(Windows[idx].AnimNotify->RootMotionSourceTarget);
-			if (Target)
+			if (const FRMSAnimWarppingConfig* Target = WarpingTarget.Find(Windows[idx].AnimNotify->RootMotionSourceTarget))
 			{
-				TriggerData.Target = *Target;
+				TriggerData.Target = (*Target).TargetLocation;
 				if (!bTargetBasedOnFoot)
 				{
 					TriggerData.Target -= HalfHeightVec;
 				}
+				TriggerData.RotationSetting = Target->RotationSetting;
+
 			}
 			else
 			{
@@ -1088,10 +1089,10 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationWarping(UCharacterMovementCompo
 				//填充一个默认数据
 				TriggerData.StartTime = Time;
 				TriggerData.EndTime = Windows[idx].StartTime;
-				FVector* Target = WarpingTarget.Find(Windows[idx - 1].AnimNotify->RootMotionSourceTarget);
+				const FRMSAnimWarppingConfig* Target = WarpingTarget.Find(Windows[idx - 1].AnimNotify->RootMotionSourceTarget);
 				if (Target)
 				{
-					EmplaceTriggerDataTargetWithAnimRootMotion_Lambda(Character, TriggerData, *Target,
+					EmplaceTriggerDataTargetWithAnimRootMotion_Lambda(Character, TriggerData, (*Target).TargetLocation,
 					                                                  Character->GetActorRotation());
 				}
 
@@ -1103,11 +1104,12 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationWarping(UCharacterMovementCompo
 				Target = WarpingTarget.Find(Windows[idx].AnimNotify->RootMotionSourceTarget);
 				if (Target)
 				{
-					TriggerData.Target = *Target;
+					TriggerData.Target = (*Target).TargetLocation;
 					if (!bTargetBasedOnFoot)
 					{
 						TriggerData.Target -= HalfHeightVec;
 					}
+					TriggerData.RotationSetting = Target->RotationSetting;
 				}
 
 				TriggerDatas.Emplace(TriggerData);
@@ -1119,10 +1121,10 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationWarping(UCharacterMovementCompo
 			{
 				TriggerData.StartTime = Windows[idx - 1].EndTime;
 				TriggerData.EndTime = Windows[idx].EndTime;
-				const auto Target = WarpingTarget.Find(Windows[idx].AnimNotify->RootMotionSourceTarget);
-				if (Target)
+				if (const auto Target = WarpingTarget.Find(Windows[idx].AnimNotify->RootMotionSourceTarget))
 				{
-					TriggerData.Target = *Target;
+					TriggerData.Target = (*Target).TargetLocation;
+					TriggerData.RotationSetting = Target->RotationSetting;
 				}
 				TriggerDatas.Emplace(TriggerData);
 				Time = Windows[idx].EndTime;

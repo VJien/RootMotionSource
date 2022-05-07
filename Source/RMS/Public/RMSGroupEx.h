@@ -233,10 +233,12 @@ struct RMS_API FRootMotionSource_AnimWarping_MultiTargets: public FRootMotionSou
 protected:
 	UPROPERTY()
 	FRMSTarget CurrTriggerData;
-	// UPROPERTY()
-	// FRMSTarget LastTriggerData;
+	UPROPERTY()
+	FRMSTarget LastTriggerData;
 
-	void UpdateTriggerTarget(float SimulationTime, float TimeScale);
+
+
+	bool UpdateTriggerTarget(float SimulationTime, float TimeScale);
 public:
 	
 	virtual void PrepareRootMotion(

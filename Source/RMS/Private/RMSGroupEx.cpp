@@ -957,18 +957,19 @@ FString FRootMotionSource_AnimWarping_FinalPoint::ToSimpleString() const
 //***************************FRootMotionSource_AnimWarping_MultiTargets********************************
 #pragma region FRootMotionSource_AnimWarping_MultiTargets
 
-void FRootMotionSource_AnimWarping_MultiTargets::UpdateTriggerTarget(float SimulationTime, float TimeScale)
+bool FRootMotionSource_AnimWarping_MultiTargets::UpdateTriggerTarget(float SimulationTime, float TimeScale)
 {
 	const float CurrTime = (GetTime() + SimulationTime) * TimeScale;
-
-	for (int32 i = 0; i < TriggerDatas.Num(); i++)
+	const int32 idx = TriggerDatas.Find(CurrTriggerData);
+	if (idx >= 0 && idx < TriggerDatas.Num() - 1 && CurrTime > CurrTriggerData.EndTime)
 	{
-		if (CurrTime >= TriggerDatas[i].StartTime && CurrTime <= TriggerDatas[i].EndTime)
-		{
-			CurrTriggerData = TriggerDatas[i];
-			return;
-		}
+		LastTriggerData = CurrTriggerData;
+		CurrTriggerData = TriggerDatas[idx + 1 ];
+		RotationSetting = CurrTriggerData.RotationSetting;
+		return true;
 	}
+
+	return false;
 }
 
 void FRootMotionSource_AnimWarping_MultiTargets::PrepareRootMotion(float SimulationTime, float MovementTickTime,
@@ -987,15 +988,46 @@ void FRootMotionSource_AnimWarping_MultiTargets::PrepareRootMotion(float Simulat
 		{
 			bInit = true;
 			CurrTriggerData = TriggerDatas[0];
+			RotationSetting = CurrTriggerData.RotationSetting;
 			SetTargetLocation(CurrTriggerData.Target);
+
+			if (RotationSetting.IsWarpRotation())
+			{
+				if (RotationSetting.Mode == ERMSRotationMode::Custom)
+				{
+					SetTargetRotation(RotationSetting.TargetRotation);
+				}
+				else
+				{
+					SetTargetRotation((GetTargetLocation() - StartLocation).Rotation());
+				}
+			}
+			else
+			{
+				SetTargetRotation(StartRotation);
+			}
+			
+	
 			SetCurrentAnimEndTime(CurrTriggerData.EndTime);
 			RMEndTime = CurrTriggerData.EndTime;
 		}
-		else
+		else if (UpdateTriggerTarget(SimulationTime, TimeScale))
 		{
-			UpdateTriggerTarget(SimulationTime, TimeScale);
 			SetCurrentAnimEndTime(CurrTriggerData.EndTime);
 			SetTargetLocation(CurrTriggerData.Target);
+
+			if (RotationSetting.IsWarpRotation())
+			{
+				if (RotationSetting.Mode == ERMSRotationMode::Custom)
+				{
+					SetTargetRotation(RotationSetting.TargetRotation);
+				}
+				else
+				{
+					SetTargetRotation((GetTargetLocation() - LastTriggerData.Target).Rotation());
+				}
+			}
+			
 			RMStartTime = CurrTriggerData.StartTime;
 			RMEndTime = CurrTriggerData.EndTime;
 		}
@@ -1025,6 +1057,11 @@ void FRootMotionSource_AnimWarping_MultiTargets::PrepareRootMotion(float Simulat
 		const FTransform CurrRootMotion = ExtractRootMotion(PrevTime, CurrTime);
 		//这个是世界空间的偏移
 		FTransform WarpTransform = ProcessRootMotion(Character, CurrRootMotion, PrevTime, CurrTime, SimulationTime);
+		FRotator WarpRot = WarpTransform.Rotator();
+		WarpRot.Pitch = 0;
+		WarpRot.Roll = 0;
+		WarpTransform.SetRotation(FQuat::Identity);
+		
 		//因为是世界空间的,所以是右乘
 		FTransform WarpTransformWS = CurrChacterFootTransform * WarpTransform;
 		const FVector CurrentLocation = Character.GetActorLocation() - FVector(
@@ -1065,7 +1102,7 @@ void FRootMotionSource_AnimWarping_MultiTargets::PrepareRootMotion(float Simulat
 		}
 #endif
 
-		FTransform NewTransform(Force);
+		FTransform NewTransform(WarpRot, Force);
 		RootMotionParams.Set(NewTransform);
 	}
 	else

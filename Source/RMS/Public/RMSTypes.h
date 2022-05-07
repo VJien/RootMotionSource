@@ -209,6 +209,17 @@ public:
 	bool bFinishOnLanded = false;
 };
 
+USTRUCT(BlueprintType)
+struct FRMSAnimWarppingConfig 
+{
+	GENERATED_BODY()
+public:
+	UPROPERTY(BlueprintReadWrite)
+	FVector TargetLocation = FVector::ZeroVector;
+	UPROPERTY(BlueprintReadWrite)
+	FRMSRotationSetting RotationSetting;
+};
+
 
 USTRUCT(BlueprintType)
 struct FRMSWindowData
@@ -245,14 +256,18 @@ struct FRMSNotifyTriggerData
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Defaults")
 	bool bHasTarget = false;
-
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Defaults")
+	FRMSRotationSetting RotationSetting;
+	
 	virtual bool operator ==(const FRMSNotifyTriggerData& other) const
 	{
 		return WindowData.AnimNotify == other.WindowData.AnimNotify &&
 			WindowData.EndTime == other.WindowData.EndTime &&
 			WindowData.StartTime == other.WindowData.StartTime &&
 			Target == other.Target &&
-			bHasTarget == other.bHasTarget;
+			bHasTarget == other.bHasTarget &&
+				RotationSetting == other.RotationSetting;
 	}
 
 	virtual bool operator !=(const FRMSNotifyTriggerData& other) const
@@ -267,6 +282,7 @@ struct FRMSNotifyTriggerData
 		WindowData.StartTime = 0;
 		Target = FVector::ZeroVector;
 		bHasTarget = false;
+		RotationSetting = FRMSRotationSetting();
 	}
 };
 
@@ -293,14 +309,16 @@ struct FRMSTarget
 	float EndTime = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Defaults")
 	FVector Target = FVector::ZeroVector;
-
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Defaults")
+	FRMSRotationSetting RotationSetting;
 
 	virtual bool operator ==(const FRMSTarget& other)const
 	{
-		return 
+		return
 			StartTime == other.StartTime &&
 			EndTime == other.EndTime &&
-			Target == other.Target ;
+			Target == other.Target &&
+			RotationSetting == other.RotationSetting;
 	}
 
 	virtual bool operator !=(const FRMSTarget& other)const
@@ -314,6 +332,7 @@ struct FRMSTarget
 		EndTime = 0;
 		StartTime = 0;
 		Target = FVector::ZeroVector;
+		RotationSetting = FRMSRotationSetting();
 		
 	}
 };
