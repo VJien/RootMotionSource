@@ -93,6 +93,38 @@ enum class ERMSRotationMode : uint8
 	FaceToTarget,
 	Custom
 };
+USTRUCT(BlueprintType)
+struct FRMSRotationSetting
+{
+	GENERATED_BODY()
+public:
+	friend FArchive& operator <<(FArchive& Ar, FRMSRotationSetting& D)
+	{
+		return Ar << D.Mode << D.Curve << D.WarpMultiplier << D.TargetRotation ;
+	}
+	bool operator==(const FRMSRotationSetting& Other) const
+	{
+		return Mode == Other.Mode && Curve == Other.Curve && WarpMultiplier == Other.WarpMultiplier &&
+			TargetRotation == Other.TargetRotation ;
+	}
+	bool operator!=(const FRMSRotationSetting& Other) const
+	{
+		return !(*this == Other);
+	}
+
+	FORCEINLINE bool IsWarpRotation()const
+	{
+		return Mode != ERMSRotationMode::None;
+	}
+	UPROPERTY(BlueprintReadWrite)
+	ERMSRotationMode Mode = ERMSRotationMode::None;
+	UPROPERTY(BlueprintReadWrite)
+	UCurveFloat* Curve = nullptr;
+	UPROPERTY(BlueprintReadWrite)
+	float WarpMultiplier = 1.0f;
+	UPROPERTY(BlueprintReadWrite)
+	FRotator TargetRotation =  FRotator::ZeroRotator;
+};
 
 
 USTRUCT(BlueprintType)
@@ -110,25 +142,20 @@ public:
 	TObjectPtr<UCurveFloat> TimeMappingCurve = nullptr;
 	
 	UPROPERTY(BlueprintReadWrite)
-	ERMSRotationMode RotationMode = ERMSRotationMode::None;
-	UPROPERTY(BlueprintReadWrite)
-	FRotator Rotation =  FRotator::ZeroRotator;
-	UPROPERTY(BlueprintReadWrite)
-	TObjectPtr<UCurveFloat> RotationCurve = nullptr;
+	FRMSRotationSetting RotationSetting;
 
 	friend FArchive& operator <<(FArchive& Ar, FRMSPathMoveToData& D)
 	{
-		return Ar << D.Duration << D.Target << D.PathOffsetCurve << D.TimeMappingCurve << D.RotationMode << D.Rotation << D.RotationCurve;
+		return Ar << D.Duration << D.Target << D.PathOffsetCurve << D.TimeMappingCurve << D.RotationSetting ;
 	}
 
-	virtual bool operator==(const FRMSPathMoveToData& Other) const
+	bool operator==(const FRMSPathMoveToData& Other) const
 	{
 		return Target == Other.Target && Duration == Other.Duration && PathOffsetCurve == Other.PathOffsetCurve &&
-			TimeMappingCurve == Other.TimeMappingCurve && RotationMode == Other.RotationMode && Rotation == Other.Rotation
-		&& RotationCurve == Other.RotationCurve;
+			TimeMappingCurve == Other.TimeMappingCurve && RotationSetting == Other.RotationSetting ;
 	}
 
-	virtual bool operator!=(const FRMSPathMoveToData& Other) const
+	bool operator!=(const FRMSPathMoveToData& Other) const
 	{
 		return !(*this == Other);
 	}
@@ -138,6 +165,8 @@ public:
 		return Duration > 0;
 	}
 };
+
+
 
 USTRUCT(BlueprintType)
 struct FRMSSetting

@@ -42,9 +42,7 @@ int32 URMSLibrary::ApplyRootMotionSource_MoveToForce(UCharacterMovementComponent
                                                      float Duration,
                                                      int32 Priority,
                                                      UCurveVector* PathOffsetCurve,
-                                                     ERMSRotationMode RotationMode,
-															 FRotator Rotation,
-                                                     UCurveFloat* RotationCurve,
+                                                     FRMSRotationSetting RotationSetting,
                                                      float StartTime,
                                                      ERMSApplyMode ApplyMode,
                                                      FRMSSetting_Move Setting)
@@ -77,9 +75,8 @@ int32 URMSLibrary::ApplyRootMotionSource_MoveToForce(UCharacterMovementComponent
 	MoveToForce->FinishVelocityParams.ClampVelocity = Setting.FinishClampVelocity;
 	MoveToForce->SetTime(StartTime);
 	MoveToForce->StartRotation = MovementComponent->GetOwner()->GetActorRotation();
-	MoveToForce->RotationMode = RotationMode;
-	MoveToForce->TargetRotation = Rotation;
-	MoveToForce->RotationMappingCurve = RotationCurve;
+	MoveToForce->RotationSetting = RotationSetting;
+
 	return MovementComponent->ApplyRootMotionSource(MoveToForce);
 }
 
@@ -127,9 +124,7 @@ int32 URMSLibrary::ApplyRootMotionSource_DynamicMoveToForce(UCharacterMovementCo
                                                             int32 Priority,
                                                             UCurveVector* PathOffsetCurve,
                                                             UCurveFloat* TimeMappingCurve,
-                                                            ERMSRotationMode RotationMode,
-															 FRotator Rotation,
-                                                            UCurveFloat* RotationCurve,
+                                                            FRMSRotationSetting RotationSetting,
                                                             float StartTime,
                                                             ERMSApplyMode ApplyMode,
                                                             FRMSSetting_Move Setting)
@@ -162,9 +157,7 @@ int32 URMSLibrary::ApplyRootMotionSource_DynamicMoveToForce(UCharacterMovementCo
 	MoveToActorForce->FinishVelocityParams.SetVelocity = Setting.FinishSetVelocity;
 	MoveToActorForce->FinishVelocityParams.ClampVelocity = Setting.FinishClampVelocity;
 	MoveToActorForce->SetTime(StartTime);
-	MoveToActorForce->RotationMode = RotationMode;
-	MoveToActorForce->Rotation = Rotation;
-	MoveToActorForce->RotationMappingCurve = RotationCurve;
+	MoveToActorForce->RotationSetting = RotationSetting;
 	MoveToActorForce->StartRotation = MovementComponent->GetOwner()->GetActorRotation();
 	return MovementComponent->ApplyRootMotionSource(MoveToActorForce);
 }
@@ -177,9 +170,7 @@ int32 URMSLibrary::ApplyRootMotionSource_MoveToForce_Parabola(
 															int32 Priority,
 															UCurveFloat* ParabolaCurve,
 															UCurveFloat* TimeMappingCurve,
-															ERMSRotationMode RotationMode,
-															FRotator Rotation,
-															UCurveFloat* RotationCurve,
+															FRMSRotationSetting RotationSetting,
 															int32 Segment,
 															float StartTime,
 															ERMSApplyMode ApplyMode,
@@ -230,9 +221,7 @@ int32 URMSLibrary::ApplyRootMotionSource_MoveToForce_Parabola(
 	MoveToForce->FinishVelocityParams.SetVelocity = Setting.FinishSetVelocity;
 	MoveToForce->FinishVelocityParams.ClampVelocity = Setting.FinishClampVelocity;
 	MoveToForce->SetTime(StartTime);
-	MoveToForce->RotationMode = RotationMode;
-	MoveToForce->Rotation = Rotation;
-	MoveToForce->RotationMappingCurve = RotationCurve;
+	MoveToForce->RotationSetting = RotationSetting;
 	return MovementComponent->ApplyRootMotionSource(MoveToForce);
 }
 
@@ -291,6 +280,7 @@ bool URMSLibrary::ApplyRootMotionSource_SimpleAnimation_BM(UCharacterMovementCom
                                                            FName InstanceName,
                                                            int32 Priority,
                                                            float StartTime, float EndTime, float Rate,
+                                                           bool bIgnoreZAxis,
                                                            ERMSApplyMode ApplyMode)
 {
 	if (!MovementComponent || !DataAnimation || (StartTime > EndTime && EndTime > 0))
@@ -376,15 +366,17 @@ bool URMSLibrary::ApplyRootMotionSource_SimpleAnimation_BM(UCharacterMovementCom
 	}
 	OffsetCV->FloatCurves[0] = CurveX;
 	OffsetCV->FloatCurves[1] = CurveY;
-	OffsetCV->FloatCurves[2] = CurveZ;
-
+	if (!bIgnoreZAxis)
+	{
+		OffsetCV->FloatCurves[2] = CurveZ;	
+	}
 	FVector WorldTarget = TargetTransformWS.GetLocation() + FVector(0, 0, HalfHeight);
 
 	FRMSSetting_Move Setting;
 	Setting.VelocityOnFinishMode = ERMSFinishVelocityMode::MaintainLastRootMotionVelocity;
 	FName InsName = InstanceName == NAME_None ? TEXT("SimpleAnimation") : InstanceName;
 	return ApplyRootMotionSource_MoveToForce(MovementComponent, InsName, StartLocation, WorldTarget,
-	                                         Duration / Rate, Priority, OffsetCV, ERMSRotationMode::None, FRotator::ZeroRotator, nullptr,StartTime,
+	                                         Duration / Rate, Priority, OffsetCV,FRMSRotationSetting(),StartTime,
 	                                         ERMSApplyMode::Replace, Setting) >= 0;
 }
 
@@ -397,13 +389,11 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationAdjustment_BM(
 																FVector TargetLocation,
 																bool bLocalTarget,
 																bool bTargetBasedOnFoot,
-																ERMSRotationMode RotationMode,
-																FRotator TargetRotation,
-																UCurveFloat* RotationCurve,
 																float InStartTime,
 																float InEndTime,
 																float Rate,
-	ERMSApplyMode ApplyMode)
+																FRMSRotationSetting RotationSetting,
+																ERMSApplyMode ApplyMode)
 {
 	if (!MovementComponent || !DataAnimation || InStartTime < 0 || (InEndTime > 0 && InEndTime <= InStartTime) || Rate
 		<= 0)
@@ -519,7 +509,7 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationAdjustment_BM(
 
 	return ApplyRootMotionSource_MoveToForce(MovementComponent, InsName, StartLocation,
 	                                         WorldFootTarget + FVector(0, 0, HalfHeight), Duration,
-	                                         Priority, OffsetCV, RotationMode,TargetRotation, RotationCurve, InStartTime) >= 0;
+	                                         Priority, OffsetCV, RotationSetting, InStartTime) >= 0;
 }
 
 bool URMSLibrary::ApplyRootMotionSource_AnimationAdjustment(UCharacterMovementComponent* MovementComponent,
@@ -532,6 +522,8 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationAdjustment(UCharacterMovementCo
                                                             float StartTime,
                                                             float EndTime,
                                                             float Rate,
+                                                            FRMSRotationSetting RotationSetting,
+                                                            bool bUseForwardCalculation,
                                                             ERMSApplyMode ApplyMode)
 {
 	if (!MovementComponent || !DataAnimation)
@@ -544,6 +536,12 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationAdjustment(UCharacterMovementCo
 	{
 		return false;
 	}
+
+	if (bUseForwardCalculation)
+	{
+		return ApplyRootMotionSource_AnimationAdjustment_BM(MovementComponent,DataAnimation,InstanceName,Priority,TargetLocation,bLocalTarget,bTargetBasedOnFoot,StartTime,EndTime,Rate,RotationSetting,ApplyMode);
+	}
+	
 	const int32 NewPriority = CalcPriorityByApplyMode(MovementComponent, InstanceName, Priority, ApplyMode);
 	if (NewPriority < 0)
 	{
@@ -579,7 +577,18 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationAdjustment(UCharacterMovementCo
 
 	RMS->AccumulateMode = ERootMotionAccumulateMode::Override;
 	RMS->Priority = NewPriority;
-	//这个目标必须是脚底位置
+	RMS->RotationSetting = RotationSetting;
+	
+
+	if (RotationSetting.Mode == ERMSRotationMode::FaceToTarget)
+	{
+		RMS->TargetRotation = (WorldTarget - CharacterTransform.GetLocation()).Rotation();
+	}
+	else if (RotationSetting.Mode == ERMSRotationMode::Custom)
+	{
+		RMS->TargetRotation = RotationSetting.TargetRotation;
+	}
+	
 	RMS->TargetLocation = WorldTarget;
 	RMS->StartLocation = CharacterTransform.GetLocation();
 	RMS->StartRotation = CharacterTransform.GetRotation().Rotator();
@@ -1274,6 +1283,7 @@ bool URMSLibrary::ApplyRootMotionSource_SimpleAnimation(UCharacterMovementCompon
                                                         float EndTime,
                                                         float Rate,
                                                         bool bIgnoreZAxis,
+                                                        bool bUseForwardCalculation,
                                                         ERMSApplyMode ApplyMode)
 {
 	if (!MovementComponent || !DataAnimation)
@@ -1284,6 +1294,10 @@ bool URMSLibrary::ApplyRootMotionSource_SimpleAnimation(UCharacterMovementCompon
 	if (NewPriority < 0)
 	{
 		return false;
+	}
+	if (bUseForwardCalculation)
+	{
+		return ApplyRootMotionSource_SimpleAnimation_BM(MovementComponent,DataAnimation,InstanceName,Priority,StartTime,EndTime,Rate,bIgnoreZAxis, ApplyMode);
 	}
 	const float CurrEndTime = (EndTime < 0 || EndTime > DataAnimation->GetPlayLength())
 		                          ? DataAnimation->GetPlayLength()

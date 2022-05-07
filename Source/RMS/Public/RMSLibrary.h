@@ -29,14 +29,12 @@ public:
 	* 
 	*/
 	UFUNCTION(BlueprintCallable, Category="RMS",
-		meta = (AdvancedDisplay = "6", AutoCreateRefTerm = "ExtraSetting", CPP_Default_ExtraSetting, CPP_Default_Rotation))
+		meta = (AdvancedDisplay = "6", AutoCreateRefTerm = "ExtraSetting", CPP_Default_ExtraSetting, CPP_Default_RotationSetting))
 	static int32 ApplyRootMotionSource_MoveToForce(UCharacterMovementComponent* MovementComponent, FName InstanceName,
 	                                               FVector StartLocation, FVector TargetLocation, float Duration,
 	                                               int32 Priority,
 	                                               UCurveVector* PathOffsetCurve = nullptr,
-	                                               ERMSRotationMode RotationMode = ERMSRotationMode::None,
-														   FRotator TargetRotation =  FRotator::ZeroRotator,
-												   UCurveFloat* RotationCurve = nullptr,
+	                                               FRMSRotationSetting RotationSetting = {},
 	                                               float StartTime = 0,
 	                                               ERMSApplyMode ApplyMode =
 		                                               ERMSApplyMode::None,
@@ -60,15 +58,13 @@ public:
 	* 
 	*/
 	UFUNCTION(BlueprintCallable, Category="RMS",
-		meta = (AdvancedDisplay = "6", AutoCreateRefTerm = "ExtraSetting", CPP_Default_ExtraSetting, CPP_Default_Rotation))
+		meta = (AdvancedDisplay = "6", AutoCreateRefTerm = "ExtraSetting", CPP_Default_ExtraSetting, CPP_Default_RotationSetting))
 	static int32 ApplyRootMotionSource_DynamicMoveToForce(UCharacterMovementComponent* MovementComponent,
 	                                                      FName InstanceName, FVector StartLocation,
 	                                                      FVector TargetLocation, float Duration, int32 Priority,
 	                                                      UCurveVector* PathOffsetCurve = nullptr,
 	                                                      UCurveFloat* TimeMappingCurve = nullptr,
-	                                                      ERMSRotationMode RotationMode = ERMSRotationMode::None,
-														   FRotator TargetRotation =  FRotator::ZeroRotator,
-	                                                      UCurveFloat* RotationCurve = nullptr,
+	                                                      FRMSRotationSetting RotationSetting = {},
 	                                                      float StartTime = 0,
 	                                                      ERMSApplyMode ApplyMode =
 		                                                      ERMSApplyMode::None,
@@ -83,7 +79,7 @@ public:
 	* 
 	*/
 	UFUNCTION(BlueprintCallable, Category="RMS",
-		meta = (AdvancedDisplay = "6", AutoCreateRefTerm = "ExtraSetting", CPP_Default_ExtraSetting, CPP_Default_Rotation))
+		meta = (AdvancedDisplay = "6", AutoCreateRefTerm = "ExtraSetting", CPP_Default_ExtraSetting, CPP_Default_RotationSetting))
 	static int32 ApplyRootMotionSource_MoveToForce_Parabola(UCharacterMovementComponent* MovementComponent,
 	                                                        FName InstanceName,
 	                                                        FVector StartLocation, FVector TargetLocation,
@@ -91,9 +87,7 @@ public:
 	                                                        int32 Priority,
 	                                                        UCurveFloat* ParabolaCurve = nullptr,
 	                                                        UCurveFloat* TimeMappingCurve = nullptr,
-	                                                        ERMSRotationMode RotationMode = ERMSRotationMode::None,
-															FRotator TargetRotation =  FRotator::ZeroRotator,
-														    UCurveFloat* RotationCurve = nullptr,
+	                                                        FRMSRotationSetting RotationSetting = {},
 	                                                        int32 Segment = 8,
 	                                                        float StartTime = 0,
 	                                                        ERMSApplyMode ApplyMode =
@@ -120,15 +114,7 @@ public:
 
 
 #pragma region Animation
-	/**
-	* BM: BasedOnMoveTo, 底层计算基于MoveTo, 开销会比非BM小,但是相对不太稳定
-	* 
-	* 直接使用动画的RootMotion数据,效果等同于播放RootMotion蒙太奇动画
-	* @param DataAnimation    参考RootMotion数据的动画, 该节点本身不负责播放动画
-	* @param EndTime		  播放的结束时间, 如果小于0,那么就使用最终的动画长度
-	* 
-	*/
-	UFUNCTION(BlueprintCallable, Category="RMS|Animation|BasedOnMoveTo", meta = (AdvancedDisplay = "5"))
+
 	static bool ApplyRootMotionSource_SimpleAnimation_BM(UCharacterMovementComponent* MovementComponent,
 	                                                     UAnimSequence* DataAnimation,
 	                                                     FName InstanceName,
@@ -136,6 +122,7 @@ public:
 	                                                     float StartTime = 0,
 	                                                     float EndTime = -1,
 	                                                     float Rate = 1,
+	                                                     bool bIgnoreZAxis = false,
 	                                                     ERMSApplyMode ApplyMode =
 		                                                     ERMSApplyMode::None);
 
@@ -154,20 +141,11 @@ public:
 	                                                  float EndTime = -1,
 	                                                  float Rate = 1,
 	                                                  bool bIgnoreZAxis = false,
+	                                                  bool bUseForwardCalculation = false,
 	                                                  ERMSApplyMode ApplyMode =
 		                                                  ERMSApplyMode::None);
 
-
-	/**
-	 ** BM: BasedOnMoveTo, 底层计算基于MoveTo, 开销会比非BM小,但是相对不太稳定
-	* 依据动画RootMotion数据适配目标点的运动,效果类似MotionWarping,  
-	* <请确认位置是基于脚底还是角色中心>
-	* @param DataAnimation      参考RootMotion数据的动画, 该节点本身不负责播放动画
-	* @param bLocalTarget		如果为true,那么偏移信息是本地空间的
-	* @param bTargetBasedOnFoot 目标位置是基于脚底还是胶囊体中心
-	* 
-	*/
-	UFUNCTION(BlueprintCallable, Category="RMS|Animation|BasedOnMoveTo", meta = (AdvancedDisplay = "6"))
+	
 	static bool ApplyRootMotionSource_AnimationAdjustment_BM(UCharacterMovementComponent* MovementComponent,
 	                                                         UAnimSequence* DataAnimation,
 	                                                         FName InstanceName,
@@ -175,12 +153,10 @@ public:
 	                                                         FVector TargetLocation,
 	                                                         bool bLocalTarget,
 	                                                         bool bTargetBasedOnFoot = true,
-	                                                         ERMSRotationMode RotationMode = ERMSRotationMode::None,
-															FRotator TargetRotation =  FRotator::ZeroRotator,
-															UCurveFloat* RotationCurve = nullptr,
 	                                                         float StartTime = 0,
 	                                                         float EndTime = -1,
 	                                                         float Rate = 1.0,
+	                                                         FRMSRotationSetting RotationSetting = {},
 	                                                         ERMSApplyMode ApplyMode = ERMSApplyMode::None);
 
 	/**
@@ -194,16 +170,24 @@ public:
 	* @param EndTime			动画数据计算结束的时间, 小于0意味着使用整个动画时长
 	* @param Rate				动画速率,同时也会影响整个RMS的速度,如动画时长1秒, Rate=2, 那么整个RMS时长就是0.5秒
 	* @param TargetLocation		最终的目标位置, 整个RootMotion运动会去适配这个位置
+	* @param RotationMode		旋转模式, 如果是None就没有旋转
+	* @param TargetRotation		如果RotationMode == Custom, 那么此Rotator就是最终的目标旋转量
+	* @param RotationCurve		旋转的时间对应的百分比
+	* @param WarpRotationSpeed		旋转速度加成,如果是1那么整个旋转过程是从Start点到Target点,  一般与曲线只用其中一个即可
 	*/
-	UFUNCTION(BlueprintCallable, Category="RMS|Animation", meta = (AdvancedDisplay = "6"))
+	UFUNCTION(BlueprintCallable, Category="RMS|Animation", meta = (AdvancedDisplay = "6",CPP_Default_RotationSetting))
 	static bool ApplyRootMotionSource_AnimationAdjustment(UCharacterMovementComponent* MovementComponent,
 	                                                      UAnimSequence* DataAnimation,
 	                                                      FName InstanceName,
 	                                                      int32 Priority,
 	                                                      FVector TargetLocation,
-	                                                      bool bLocalTarget, bool bTargetBasedOnFoot = true,
+	                                                      bool bLocalTarget,
+	                                                      bool bTargetBasedOnFoot = true,
 	                                                      float StartTime = 0,
-	                                                      float EndTime = -1.0, float Rate = 1.0,
+	                                                      float EndTime = -1.0,
+	                                                      float Rate = 1.0,
+	                                                      FRMSRotationSetting RotationSetting = {},
+	                                                      bool bUseForwardCalculation = false,
 	                                                      ERMSApplyMode ApplyMode =
 		                                                      ERMSApplyMode::None);
 

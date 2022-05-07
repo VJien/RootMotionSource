@@ -66,13 +66,12 @@ struct RMS_API FRootMotionSource_MoveToForce_WithRotation: public FRootMotionSou
 		const UCharacterMovementComponent& MoveComponent
 		) override;
 	UPROPERTY()
-	UCurveFloat* RotationMappingCurve = nullptr;
-	UPROPERTY()
-	ERMSRotationMode RotationMode = ERMSRotationMode::None;
-	UPROPERTY()
-	FRotator TargetRotation = FRotator::ZeroRotator;	
+	FRMSRotationSetting RotationSetting;
 	UPROPERTY()
 	FRotator StartRotation = FRotator::ZeroRotator;
+protected:
+	// UPROPERTY()
+	// FRotator TargetRotation = FRotator::ZeroRotator;
 	
 };
 USTRUCT()
@@ -89,11 +88,7 @@ struct RMS_API FRootMotionSource_MoveToDynamicForce_WithRotation: public FRootMo
 		const UCharacterMovementComponent& MoveComponent
 		) override;
 	UPROPERTY()
-	UCurveFloat* RotationMappingCurve = nullptr;
-	UPROPERTY()
-	ERMSRotationMode RotationMode = ERMSRotationMode::None;
-	UPROPERTY()
-	FRotator Rotation = FRotator::ZeroRotator;												
+	FRMSRotationSetting RotationSetting;								
 	UPROPERTY()
 	FRotator StartRotation = FRotator::ZeroRotator;
 	
@@ -114,6 +109,8 @@ struct RMS_API FRootMotionSource_AnimWarping: public FRootMotionSource
 	FVector StartLocation = FVector::ZeroVector;
 	UPROPERTY()
 	FRotator StartRotation = FRotator::ZeroRotator;
+	UPROPERTY()
+	FRMSRotationSetting RotationSetting;
 	
 	UPROPERTY()
 	float AnimStartTime = 0;
@@ -122,6 +119,8 @@ struct RMS_API FRootMotionSource_AnimWarping: public FRootMotionSource
 	UPROPERTY()
 	bool bIgnoreZAxis = false;
 protected:
+	UPROPERTY()
+	FRotator CachedRotation = FRotator::ZeroRotator;
 	UPROPERTY()
 	FVector CachedTarget = FVector::ZeroVector;
 	UPROPERTY()
@@ -133,11 +132,18 @@ protected:
 	{
 		return CachedEndTime <= 0? AnimEndTime: CachedEndTime;
 	};
+	FORCEINLINE FRotator GetTargetRotation() const
+	{
+		return CachedRotation;
+	};
 	void SetCurrentAnimEndTime(float NewEndTime)
 	{
 		CachedEndTime = NewEndTime;
 	}
-	
+	void SetTargetRotation(FRotator Rotation)
+	{
+		CachedRotation = Rotation;
+	}
 public:
 	void SetTargetLocation(FVector Target)
 	{
@@ -148,8 +154,10 @@ public:
 		return CachedTarget;
 	};
 	
-	virtual FTransform ProcessRootMotion(const ACharacter& Character,const FTransform& InRootMotion,  float InPreviousTime, float InCurrentTime);
+	virtual FTransform ProcessRootMotion(const ACharacter& Character,const FTransform& InRootMotion,  float InPreviousTime, float InCurrentTime, float DeltaSeconds);
+	FQuat WarpRotation(const ACharacter& Character, const FTransform& RootMotionDelta, const FTransform& RootMotionTotal, float TimeRemaining, float DeltaSeconds);
 
+	
 	virtual bool UpdateStateFrom(const FRootMotionSource* SourceToTakeStateFrom, bool bMarkForSimulatedCatchup = false) override;
 	
 	virtual void PrepareRootMotion(
@@ -186,6 +194,8 @@ struct RMS_API FRootMotionSource_AnimWarping_FinalPoint: public FRootMotionSourc
 	
 	UPROPERTY()
 	FVector TargetLocation = FVector::ZeroVector;
+	UPROPERTY()
+	FRotator TargetRotation = FRotator::ZeroRotator;
 
 public:
 	
