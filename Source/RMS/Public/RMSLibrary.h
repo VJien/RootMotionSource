@@ -197,8 +197,11 @@ public:
 
 
 	/**
-	 ** BM: BasedOnMoveTo, 底层计算基于MoveTo, 开销会比非BM小,但是相对不太稳定
-	* 需要配置动画通知窗口, 通过WarpingTarget配置对应窗口的目标点信息,做到分阶段的运动适配,类似MotionWarping
+	 * 需要配置动画通知窗口, 通过WarpingTarget配置对应窗口的目标点信息,做到分阶段的运动适配,类似MotionWarping
+	 * WarpingTarget数据需要与动画通知严格匹配, 否则可能出错
+	 * 前向计算, 把数据烘培到曲线上, 对比ApplyRootMotionSource_AnimationWarping(), 此方式精确度差一点, 适合稍微简单点的运动
+	 * 注意: 没有旋转
+	* 
 	* <请确认位置是基于脚底还是角色中心>
 	* @param DataAnimation      参考RootMotion数据的动画, 该节点本身不负责播放动画
 	* @param WarpingTarget		需要与动画通知严格匹配
@@ -207,8 +210,8 @@ public:
 	* @param bExcludeEndAnimMotion 排除末尾的动画位移 
 	* @param bTargetBasedOnFoot 位置是基于脚底还是胶囊体中心
 	*/
-	UFUNCTION(BlueprintCallable, Category="RMS|Animation|BasedOnMoveTo", meta = (AdvancedDisplay = "4"))
-	static bool ApplyRootMotionSource_AnimationWarping_BM(UCharacterMovementComponent* MovementComponent,
+	UFUNCTION(BlueprintCallable, Category="RMS|Animation", meta = (AdvancedDisplay = "4"))
+	static bool ApplyRootMotionSource_AnimationWarping_ForwardCalculation(UCharacterMovementComponent* MovementComponent,
 	                                                      UAnimSequence* DataAnimation,
 	                                                      TMap<FName, FVector> WarpingTarget, FName InstanceName,
 	                                                      int32 Priority,
@@ -223,7 +226,7 @@ public:
 	/**
  **
 * 需要配置动画通知窗口, 通过WarpingTarget配置对应窗口的目标点信息,做到分阶段的运动适配,类似MotionWarping
-* <注意: 此RMS是基于当前实时位置计算, 所以即使使用新的RMS覆盖旧的也会从当前实时位置继续执行而非跳转到之前的开始位置>
+* <注意: 此RMS是基于当前实时位置计算, 所以重新调用新的同类RMS只会从当前实时位置继续执行而非跳转到之前的开始位置>
 * <请确认位置是基于脚底还是角色中心>
 * @param DataAnimation      参考RootMotion数据的动画, 该节点本身不负责播放动画
 * @param WarpingTarget		需要与动画通知严格匹配
@@ -241,7 +244,8 @@ public:
 														  int32 Priority,
 														  bool bTargetBasedOnFoot = true,
 														  float Rate = 1,
-														  float Tolerance = 0.01, 
+														  float Tolerance = 0.01,
+														  bool bExcludeEndAnimMotion = false,
 														  ERMSApplyMode ApplyMode =
 															  ERMSApplyMode::None);
 

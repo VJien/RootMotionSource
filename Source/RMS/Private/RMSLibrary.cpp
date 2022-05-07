@@ -603,7 +603,7 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationAdjustment(UCharacterMovementCo
 }
 
 
-bool URMSLibrary::ApplyRootMotionSource_AnimationWarping_BM(
+bool URMSLibrary::ApplyRootMotionSource_AnimationWarping_ForwardCalculation(
 	UCharacterMovementComponent* MovementComponent, UAnimSequence* DataAnimation,
 	TMap<FName, FVector> WarpingTarget, FName InstanceName,
 	int32 Priority, bool bTargetBasedOnFoot, float Rate,
@@ -658,6 +658,7 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationWarping_BM(
 					TriggerData.Target += HalfHeightVec;
 				}
 				TriggerData.bHasTarget = true;
+				
 			}
 			TriggerDatas.Emplace(TriggerData);
 		};
@@ -967,8 +968,10 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationWarping(UCharacterMovementCompo
                                                          bool bTargetBasedOnFoot,
                                                          float Rate,
                                                          float Tolerance,
+                                                         bool bExcludeEndAnimMotion,
                                                          ERMSApplyMode ApplyMode)
 {
+	
 	auto EmplaceTriggerDataTargetWithAnimRootMotion_Lambda = [&](ACharacter* Character,
 	                                                             FRMSTarget& Data,
 	                                                             FVector StartLocation, FRotator StartRotation)
@@ -1037,7 +1040,7 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationWarping(UCharacterMovementCompo
 	{
 		FRMSTarget TriggerData;
 		//已经到最后一个通知, 但是通知的结尾不是动画结束点, 就添加一个默认数据;
-		if (idx > Windows.Num() - 1 && AnimLength - Windows[Windows.Num() - 1].EndTime > Tolerance)
+		if (!bExcludeEndAnimMotion && idx > Windows.Num() - 1 && AnimLength - Windows[Windows.Num() - 1].EndTime > Tolerance)
 		{
 			TriggerData.StartTime = Windows[Windows.Num() - 1].EndTime;
 			TriggerData.EndTime = AnimLength;
@@ -1045,6 +1048,7 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationWarping(UCharacterMovementCompo
 			{
 				EmplaceTriggerDataTargetWithAnimRootMotion_Lambda(Character, TriggerData, (*Target).TargetLocation,
 				                                                  Character->GetActorRotation());
+				TriggerDatas.Emplace(TriggerData);
 				break;
 			}
 			else
