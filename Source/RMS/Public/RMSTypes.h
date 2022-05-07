@@ -116,12 +116,16 @@ public:
 	{
 		return Mode != ERMSRotationMode::None;
 	}
+	//旋转模式, 如果是None就没有旋转
 	UPROPERTY(BlueprintReadWrite)
 	ERMSRotationMode Mode = ERMSRotationMode::None;
+	//旋转的时间对应的百分比曲线
 	UPROPERTY(BlueprintReadWrite)
 	UCurveFloat* Curve = nullptr;
+	//旋转速度加成,如果是1那么整个旋转过程是从Start点到Target点,  一般与曲线只用其中一个即可
 	UPROPERTY(BlueprintReadWrite)
 	float WarpMultiplier = 1.0f;
+	//如果RotationMode == Custom, 那么此Rotator就是最终的目标旋转量
 	UPROPERTY(BlueprintReadWrite)
 	FRotator TargetRotation =  FRotator::ZeroRotator;
 };

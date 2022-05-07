@@ -194,6 +194,7 @@ int32 URMSLibrary::ApplyRootMotionSource_MoveToForce_Parabola(
 	MoveToForce->Priority = NewPriority;
 	MoveToForce->StartLocation = StartLocation;
 	MoveToForce->Duration = Duration;
+	MoveToForce->StartRotation = MovementComponent->GetOwner()->GetActorRotation();
 	MoveToForce->bRestrictSpeedToExpected = Setting.bRestrictSpeedToExpected;
 	FVector Target = TargetLocation;
 	UCurveVector* PathCurve = NewObject<UCurveVector>();

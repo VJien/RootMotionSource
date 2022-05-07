@@ -22,10 +22,12 @@ class RMS_API URMSLibrary : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 public:
 	/**
-	* 移动到一个点
+	* 移动到一个点, 一般情况下 StartLocation和TargetLocation都是已角色中心点为参考点
+	* 
 	* @param StartLocation      角色会基于此开始移动,所以请确保是Actor当前的Location
 	* @param TargetLocation		参考StartLocation的目标位置(要考虑HalfHeight)
-	* @param bFaceToTarget      是否逐步转向目标
+	* @param RotationSetting	旋转设置, 具体看每个参数自己的注释
+	* @param ApplyMode	        RMS的应用模式, 默认是队列, 即存在同名RMS的情况下会在后台执行直到前一个运行完
 	* 
 	*/
 	UFUNCTION(BlueprintCallable, Category="RMS",
@@ -76,6 +78,8 @@ public:
 	* @param StartLocation      角色会基于此开始移动,所以请确保是Actor当前的Location
 	* @param TargetLocation		参考StartLocation的目标位置(要考虑HalfHeight)
 	* @param ParabolaCurve      定义抛物线形态
+	* @param RotationSetting	旋转设置, 具体看每个参数自己的注释
+	* @param ApplyMode	        RMS的应用模式, 默认是队列, 即存在同名RMS的情况下会在后台执行直到前一个运行完
 	* 
 	*/
 	UFUNCTION(BlueprintCallable, Category="RMS",
@@ -131,6 +135,7 @@ public:
 	* @param DataAnimation    参考RootMotion数据的动画, 该节点本身不负责播放动画
 	* @param EndTime		  播放的结束时间, 如果小于0,那么就使用最终的动画长度
 	* @param bIgnoreZAxis	  忽略Z方向的RootMotion
+	* @param ApplyMode	        RMS的应用模式, 默认是队列, 即存在同名RMS的情况下会在后台执行直到前一个运行完
 	*/
 	UFUNCTION(BlueprintCallable, Category="RMS|Animation", meta = (AdvancedDisplay = "3"))
 	static bool ApplyRootMotionSource_SimpleAnimation(UCharacterMovementComponent* MovementComponent,
@@ -161,7 +166,6 @@ public:
 
 	/**
 	* 依据动画RootMotion数据适配目标点的运动,效果类似MotionWarping, 只需要设置一个最终的目标位置
-	* <注意: 此RMS是基于当前实时位置计算, 所以即使使用新的RMS覆盖旧的也会从当前实时位置继续执行而非跳转到之前的开始位置>
 	* <请确认位置是基于脚底还是角色中心>
 	* @param DataAnimation      参考RootMotion数据的动画, 该节点本身不负责播放动画
 	* @param bLocalTarget		如果为true,那么偏移信息是本地空间的
@@ -170,10 +174,9 @@ public:
 	* @param EndTime			动画数据计算结束的时间, 小于0意味着使用整个动画时长
 	* @param Rate				动画速率,同时也会影响整个RMS的速度,如动画时长1秒, Rate=2, 那么整个RMS时长就是0.5秒
 	* @param TargetLocation		最终的目标位置, 整个RootMotion运动会去适配这个位置
-	* @param RotationMode		旋转模式, 如果是None就没有旋转
-	* @param TargetRotation		如果RotationMode == Custom, 那么此Rotator就是最终的目标旋转量
-	* @param RotationCurve		旋转的时间对应的百分比
-	* @param WarpRotationSpeed		旋转速度加成,如果是1那么整个旋转过程是从Start点到Target点,  一般与曲线只用其中一个即可
+	* @param RotationSetting	旋转设置, 具体看每个参数自己的注释
+	* @param bUseForwardCalculation	前向计算, 会把数据提前烘培到Curve上, Runtime开销会减少, 但是精确度略低
+	* @param ApplyMode	        RMS的应用模式, 默认是队列, 即存在同名RMS的情况下会在后台执行直到前一个运行完
 	*/
 	UFUNCTION(BlueprintCallable, Category="RMS|Animation", meta = (AdvancedDisplay = "6",CPP_Default_RotationSetting))
 	static bool ApplyRootMotionSource_AnimationAdjustment(UCharacterMovementComponent* MovementComponent,
