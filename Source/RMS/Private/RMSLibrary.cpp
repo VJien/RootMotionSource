@@ -199,19 +199,37 @@ int32 URMSLibrary::ApplyRootMotionSource_MoveToForce_Parabola(
 	MoveToForce->bRestrictSpeedToExpected = Setting.bRestrictSpeedToExpected;
 	FVector Target = TargetLocation;
 	UCurveVector* PathCurve = NewObject<UCurveVector>();
-
+	const bool bUseTotalOffset = false;
 	if (ParabolaCurve)
 	{
-		const float OffsetZ = (TargetLocation - StartLocation).Z;
 		FRichCurve ZCurve;
-		for (int32 i = 0; i <= Segment; i++)
+		if (bUseTotalOffset)
 		{
-			const float Fraction = static_cast<float>(i) / static_cast<float>(Segment);
-			const float FractionZ = FMath::Lerp<float, float>(0, TargetLocation.Z - StartLocation.Z, Fraction);
-			const float Value = ParabolaCurve->GetFloatValue(Fraction);
-			ZCurve.AddKey(Fraction, OffsetZ * Value - FractionZ);
+			const float OffsetZ = (TargetLocation - StartLocation).Z;
+			Target.Z = StartLocation.Z;
+			
+			for (int32 i = 0; i <= Segment; i++)
+			{
+				const float Fraction = static_cast<float>(i) / static_cast<float>(Segment);
+				const float FractionZ = FMath::Lerp<float, float>(0, OffsetZ, Fraction);
+				const float Value = ParabolaCurve->GetFloatValue(Fraction);
+				ZCurve.AddKey(Fraction, OffsetZ * Value);
+			}
 		}
+		else
+		{
+			const float OffsetZ = (TargetLocation - StartLocation).Z;
+			
+			for (int32 i = 0; i <= Segment; i++)
+			{
+				const float Fraction = static_cast<float>(i) / static_cast<float>(Segment);
+				const float FractionZ = FMath::Lerp<float, float>(0, TargetLocation.Z - StartLocation.Z, Fraction);
+				const float Value = ParabolaCurve->GetFloatValue(Fraction);
+				ZCurve.AddKey(Fraction, OffsetZ * Value - FractionZ);
+			}
 
+		}
+		
 		PathCurve->FloatCurves[2] = ZCurve;
 	}
 
