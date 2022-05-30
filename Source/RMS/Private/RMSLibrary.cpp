@@ -407,7 +407,7 @@ bool URMSLibrary::ApplyRootMotionSource_SimpleAnimation_BM(UCharacterMovementCom
 		CurveZ.AddKey(CurrentTime / Duration / Rate, CurveOffset.Z);
 
 
-		if (RMS::CVarRMS_Debug.GetValueOnGameThread() == 1)
+		if (RMS::CVarRMS_Debug.GetValueOnGameThread() > 0)
 		{
 			//动画每一帧位置
 			UKismetSystemLibrary::DrawDebugCapsule(
@@ -534,7 +534,7 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationAdjustment_BM(
 	OffsetCV->FloatCurves[2] = CurveZ;
 	FName InsName = InstanceName == NAME_None ? TEXT("AnimationAdjustment") : InstanceName;
 	const float Duration = EndTime / Rate;
-	if (RMS::CVarRMS_Debug.GetValueOnGameThread() == 1)
+	if (RMS::CVarRMS_Debug.GetValueOnGameThread() > 0)
 	{
 		for (int32 i = 0; i <= 10; i++)
 		{
@@ -853,7 +853,7 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationWarping_ForwardCalculation(
 	TotalAnimRM = TotalAnimRM * Mesh2Char;
 
 
-	if (RMS::CVarRMS_Debug.GetValueOnGameThread() == 1)
+	if (RMS::CVarRMS_Debug.GetValueOnGameThread() > 0)
 	{
 		//绘制最后目标
 		UKismetSystemLibrary::DrawDebugSphere(
@@ -970,7 +970,7 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationWarping_ForwardCalculation(
 		CurveZ.AddKey(TimeScaled / Duration, CurveOffset.Z);
 
 
-		if (RMS::CVarRMS_Debug.GetValueOnGameThread() == 1)
+		if (RMS::CVarRMS_Debug.GetValueOnGameThread() > 0)
 		{
 			//动画每一帧位置
 			UKismetSystemLibrary::DrawDebugSphere(

@@ -134,7 +134,7 @@ void FRootMotionSource_PathMoveToForce::PrepareRootMotion(float SimulationTime, 
 
 		// Debug
 #if ROOT_MOTION_DEBUG
-		if (RMS::CVarRMS_Debug.GetValueOnGameThread() != 0)
+		if (RMS::CVarRMS_Debug.GetValueOnGameThread() > 0)
 		{
 			const FVector LocDiff = MoveComponent.UpdatedComponent->GetComponentLocation() - CurrentLocation;
 			const float DebugLifetime = 5.0f;
@@ -312,7 +312,7 @@ void FRootMotionSource_JumpForce_WithPoints::PrepareRootMotion(float SimulationT
 
 		// Debug
 #if ROOT_MOTION_DEBUG
-		if (RootMotionSourceDebug::CVarDebugRootMotionSources.GetValueOnGameThread() != 0)
+		if (RMS::CVarRMS_Debug.GetValueOnGameThread() > 0)
 		{
 			const FVector CurrentLocation = Character.GetActorLocation();
 			const FVector CurrentTargetLocation = CurrentLocation + (TargetRelativeLocation - CurrentRelativeLocation);
@@ -619,7 +619,7 @@ void FRootMotionSource_MoveToForce_WithRotation::PrepareRootMotion(float Simulat
 
 			// Debug
 #if ROOT_MOTION_DEBUG
-			if (RootMotionSourceDebug::CVarDebugRootMotionSources.GetValueOnGameThread() != 0)
+			if (RMS::CVarRMS_Debug.GetValueOnGameThread() > 0)
 			{
 				const FVector LocDiff = MoveComponent.UpdatedComponent->GetComponentLocation() - CurrentLocation;
 				const float DebugLifetime = 2.0f;
@@ -795,7 +795,7 @@ void FRootMotionSource_MoveToDynamicForce_WithRotation::PrepareRootMotion(float 
 
 			// Debug
 #if ROOT_MOTION_DEBUG
-			if (RootMotionSourceDebug::CVarDebugRootMotionSources.GetValueOnGameThread() != 0)
+			if (RMS::CVarRMS_Debug.GetValueOnGameThread() > 0)
 			{
 				const FVector LocDiff = MoveComponent.UpdatedComponent->GetComponentLocation() - CurrentLocation;
 				const float DebugLifetime = 2.0f;
@@ -1120,7 +1120,7 @@ void FRootMotionSource_AnimWarping::PrepareRootMotion(float SimulationTime, floa
 
 		// Debug
 #if ROOT_MOTION_DEBUG
-		if (RMS::CVarRMS_Debug.GetValueOnGameThread() != 0)
+		if (RMS::CVarRMS_Debug.GetValueOnGameThread() > 0)
 		{
 			const FVector LocDiff = MoveComponent.UpdatedComponent->GetComponentLocation() - CurrentLocation;
 			const float DebugLifetime = 5;
@@ -1329,7 +1329,7 @@ void FRootMotionSource_AnimWarping_FinalPoint::PrepareRootMotion(float Simulatio
 
 		// Debug
 #if ROOT_MOTION_DEBUG
-		if (RMS::CVarRMS_Debug.GetValueOnGameThread() != 0)
+		if (RMS::CVarRMS_Debug.GetValueOnGameThread() > 0)
 		{
 			const FVector LocDiff = MoveComponent.UpdatedComponent->GetComponentLocation() - CurrentLocation;
 			const float DebugLifetime = 5;
@@ -1533,7 +1533,7 @@ void FRootMotionSource_AnimWarping_MultiTargets::PrepareRootMotion(float Simulat
 
 		// Debug
 #if ROOT_MOTION_DEBUG
-		if (RMS::CVarRMS_Debug.GetValueOnGameThread() != 0)
+		if (RMS::CVarRMS_Debug.GetValueOnGameThread() > 0)
 		{
 			const FVector LocDiff = MoveComponent.UpdatedComponent->GetComponentLocation() - CurrentLocation;
 			const float DebugLifetime = 5;
