@@ -53,6 +53,104 @@ struct RMS_API FRootMotionSource_PathMoveToForce: public FRootMotionSource
 	
 };
 
+template<>
+struct TStructOpsTypeTraits< FRootMotionSource_PathMoveToForce > : public TStructOpsTypeTraitsBase2< FRootMotionSource_PathMoveToForce >
+{
+	enum
+	{
+		WithNetSerializer = true,
+		WithCopy = true
+	};
+};
+
+
+USTRUCT()
+struct RMS_API FRootMotionSource_JumpForce_WithPoints: public FRootMotionSource
+{
+	GENERATED_USTRUCT_BODY()
+	FRootMotionSource_JumpForce_WithPoints();
+	virtual ~FRootMotionSource_JumpForce_WithPoints() {}
+
+	UPROPERTY()
+	FRotator StartRotation = FRotator::ZeroRotator;
+
+	UPROPERTY()
+	FVector StartLocation = FVector::ZeroVector;
+	
+	UPROPERTY()
+	FVector HalfWayLocation = FVector::ZeroVector;
+	
+	UPROPERTY()
+	FVector TargetLocation = FVector::ZeroVector;
+	
+	UPROPERTY()
+	FRMSRotationSetting RotationSetting;
+	
+	UPROPERTY()
+	bool bDisableTimeout;
+	
+
+	UPROPERTY()
+	TObjectPtr<UCurveFloat> TimeMappingCurve = nullptr;
+protected:
+	UPROPERTY()
+	TObjectPtr<UCurveVector> PathOffsetCurve = nullptr;
+
+	
+	FVector SavedHalfwayLocation;
+	float SavedHeight =0;
+	float SavedDistance = 0;
+	FRotator SavedRotation = FRotator::ZeroRotator;
+	bool bIsInit = false;
+
+public:
+	FVector GetPathOffset(float MoveFraction) const;
+
+	FVector GetRelativeLocation(float MoveFraction) const;
+
+	virtual bool IsTimeOutEnabled() const override;
+
+	virtual FRootMotionSource* Clone() const override;
+
+	virtual bool Matches(const FRootMotionSource* Other) const override;
+
+	virtual bool MatchesAndHasSameState(const FRootMotionSource* Other) const override;
+
+	virtual bool UpdateStateFrom(const FRootMotionSource* SourceToTakeStateFrom, bool bMarkForSimulatedCatchup = false) override;
+
+	virtual void PrepareRootMotion(
+		float SimulationTime, 
+		float MovementTickTime,
+		const ACharacter& Character, 
+		const UCharacterMovementComponent& MoveComponent
+		) override;
+
+	virtual bool NetSerialize(FArchive& Ar, UPackageMap* Map, bool& bOutSuccess) override;
+
+	virtual UScriptStruct* GetScriptStruct() const override;
+
+	virtual FString ToSimpleString() const override;
+
+	virtual void AddReferencedObjects(class FReferenceCollector& Collector) override;
+
+	void InitPath(const ACharacter& Character);
+	
+};
+
+
+
+template<>
+struct TStructOpsTypeTraits< FRootMotionSource_JumpForce_WithPoints > : public TStructOpsTypeTraitsBase2< FRootMotionSource_JumpForce_WithPoints >
+{
+	enum
+	{
+		WithNetSerializer = true,
+		WithCopy = true
+	};
+};
+
+
+
 USTRUCT()
 struct RMS_API FRootMotionSource_MoveToForce_WithRotation: public FRootMotionSource_MoveToForce
 {
@@ -66,6 +164,20 @@ struct RMS_API FRootMotionSource_MoveToForce_WithRotation: public FRootMotionSou
 		const ACharacter& Character, 
 		const UCharacterMovementComponent& MoveComponent
 		) override;
+	virtual bool UpdateStateFrom(const FRootMotionSource* SourceToTakeStateFrom, bool bMarkForSimulatedCatchup = false) override;
+
+	virtual bool NetSerialize(FArchive& Ar, UPackageMap* Map, bool& bOutSuccess) override;
+	virtual FRootMotionSource* Clone() const override;
+
+	virtual bool Matches(const FRootMotionSource* Other) const override;
+
+	virtual bool MatchesAndHasSameState(const FRootMotionSource* Other) const override;
+	virtual UScriptStruct* GetScriptStruct() const override;
+	virtual FString ToSimpleString() const override;
+	virtual void AddReferencedObjects(class FReferenceCollector& Collector) override;
+
+	
+	
 	UPROPERTY()
 	FRMSRotationSetting RotationSetting;
 	UPROPERTY()
@@ -75,6 +187,19 @@ protected:
 	// FRotator TargetRotation = FRotator::ZeroRotator;
 	
 };
+
+template<>
+struct TStructOpsTypeTraits< FRootMotionSource_MoveToForce_WithRotation > : public TStructOpsTypeTraitsBase2< FRootMotionSource_MoveToForce_WithRotation >
+{
+	enum
+	{
+		WithNetSerializer = true,
+		WithCopy = true
+	};
+};
+
+
+
 USTRUCT()
 struct RMS_API FRootMotionSource_MoveToDynamicForce_WithRotation: public FRootMotionSource_MoveToDynamicForce
 {
@@ -88,13 +213,28 @@ struct RMS_API FRootMotionSource_MoveToDynamicForce_WithRotation: public FRootMo
 		const ACharacter& Character, 
 		const UCharacterMovementComponent& MoveComponent
 		) override;
+	virtual UScriptStruct* GetScriptStruct() const override;
+	virtual bool NetSerialize(FArchive& Ar, UPackageMap* Map, bool& bOutSuccess) override;
+	virtual FRootMotionSource* Clone() const override;
+
+	virtual bool Matches(const FRootMotionSource* Other) const override;
+
+	virtual bool MatchesAndHasSameState(const FRootMotionSource* Other) const override;
 	UPROPERTY()
 	FRMSRotationSetting RotationSetting;								
 	UPROPERTY()
 	FRotator StartRotation = FRotator::ZeroRotator;
 	
 };
-
+template<>
+struct TStructOpsTypeTraits< FRootMotionSource_MoveToDynamicForce_WithRotation > : public TStructOpsTypeTraitsBase2< FRootMotionSource_MoveToDynamicForce_WithRotation >
+{
+	enum
+	{
+		WithNetSerializer = true,
+		WithCopy = true
+	};
+};
 USTRUCT()
 struct RMS_API FRootMotionSource_AnimWarping: public FRootMotionSource
 {
@@ -184,7 +324,15 @@ protected:
 
 	
 };
-
+template<>
+struct TStructOpsTypeTraits< FRootMotionSource_AnimWarping > : public TStructOpsTypeTraitsBase2< FRootMotionSource_AnimWarping >
+{
+	enum
+	{
+		WithNetSerializer = true,
+		WithCopy = true
+	};
+};
 USTRUCT()
 struct RMS_API FRootMotionSource_AnimWarping_FinalPoint: public FRootMotionSource_AnimWarping
 {
@@ -219,7 +367,15 @@ public:
 
 	
 };
-
+template<>
+struct TStructOpsTypeTraits< FRootMotionSource_AnimWarping_FinalPoint > : public TStructOpsTypeTraitsBase2< FRootMotionSource_AnimWarping_FinalPoint >
+{
+	enum
+	{
+		WithNetSerializer = true,
+		WithCopy = true
+	};
+};
 
 USTRUCT()
 struct RMS_API FRootMotionSource_AnimWarping_MultiTargets: public FRootMotionSource_AnimWarping
@@ -261,7 +417,15 @@ public:
 
 	
 };
-
+template<>
+struct TStructOpsTypeTraits< FRootMotionSource_AnimWarping_MultiTargets > : public TStructOpsTypeTraitsBase2< FRootMotionSource_AnimWarping_MultiTargets >
+{
+	enum
+	{
+		WithNetSerializer = true,
+		WithCopy = true
+	};
+};
 
 
 

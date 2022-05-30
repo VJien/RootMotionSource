@@ -14,6 +14,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetMaterialLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Kismet/KismetSystemLibrary.h"
 
 PRAGMA_DISABLE_OPTIMIZATION
 
@@ -236,7 +237,338 @@ void FRootMotionSource_PathMoveToForce::AddReferencedObjects(FReferenceCollector
 	}
 	FRootMotionSource::AddReferencedObjects(Collector);
 }
+//*******************************************************
+#pragma region Jump
+FRootMotionSource_JumpForce_WithPoints::FRootMotionSource_JumpForce_WithPoints()
+{
+	
+}
 
+bool FRootMotionSource_JumpForce_WithPoints::UpdateStateFrom(const FRootMotionSource* SourceToTakeStateFrom, bool bMarkForSimulatedCatchup)
+{
+	if (!FRootMotionSource::UpdateStateFrom(SourceToTakeStateFrom, bMarkForSimulatedCatchup))
+	{
+		return false;
+	}
+
+	return true;
+}
+
+void FRootMotionSource_JumpForce_WithPoints::PrepareRootMotion(float SimulationTime, float MovementTickTime, const ACharacter& Character, const UCharacterMovementComponent& MoveComponent)
+{
+	if (!bIsInit)
+	{
+		bIsInit = true;
+		InitPath(Character);
+	}
+	RootMotionParams.Clear();
+	
+	if (Duration > SMALL_NUMBER && MovementTickTime > SMALL_NUMBER && SimulationTime > SMALL_NUMBER)
+	{
+		float CurrentTimeFraction = GetTime() / Duration;
+		float TargetTimeFraction = (GetTime() + SimulationTime) / Duration;
+
+		// If we're beyond specified duration, we need to re-map times so that
+		// we continue our desired ending velocity
+		if (TargetTimeFraction > 1.f)
+		{
+			float TimeFractionPastAllowable = TargetTimeFraction - 1.0f;
+			TargetTimeFraction -= TimeFractionPastAllowable;
+			CurrentTimeFraction -= TimeFractionPastAllowable;
+		}
+
+		float CurrentMoveFraction = CurrentTimeFraction;
+		float TargetMoveFraction = TargetTimeFraction;
+
+		if (TimeMappingCurve)
+		{
+			CurrentMoveFraction = URMSLibrary::EvaluateFloatCurveAtFraction(*TimeMappingCurve, CurrentMoveFraction);
+			TargetMoveFraction  = URMSLibrary::EvaluateFloatCurveAtFraction(*TimeMappingCurve, TargetMoveFraction);
+		}
+		if (RotationSetting.Mode == ERMSRotationMode::FaceToTarget)
+		{
+			float RotFraction = CurrentMoveFraction;
+			if (RotationSetting.Curve)
+			{
+				RotFraction = FMath::Clamp(RotationSetting.WarpMultiplier *  URMSLibrary::EvaluateFloatCurveAtFraction(*RotationSetting.Curve, RotFraction),0,1);
+			}
+			const FRotator TargetRotation = (TargetLocation - StartLocation).Rotation();
+			SavedRotation = UKismetMathLibrary::RLerp(StartRotation, TargetRotation, RotFraction, true);
+		}
+		else if(RotationSetting.Mode == ERMSRotationMode::Custom)
+		{
+			float RotFraction = CurrentMoveFraction;
+			if (RotationSetting.Curve)
+			{
+				RotFraction = FMath::Clamp(RotationSetting.WarpMultiplier *  URMSLibrary::EvaluateFloatCurveAtFraction(*RotationSetting.Curve, RotFraction),0,1);
+			}
+			const FRotator TargetRotation = RotationSetting.TargetRotation;
+			SavedRotation = UKismetMathLibrary::RLerp(StartRotation, TargetRotation, RotFraction, true);
+		}
+		const FVector CurrentRelativeLocation = GetRelativeLocation(CurrentMoveFraction);
+		const FVector TargetRelativeLocation = GetRelativeLocation(TargetMoveFraction);
+
+		const FVector Force = (TargetRelativeLocation - CurrentRelativeLocation) / MovementTickTime;
+
+		// Debug
+#if ROOT_MOTION_DEBUG
+		if (RootMotionSourceDebug::CVarDebugRootMotionSources.GetValueOnGameThread() != 0)
+		{
+			const FVector CurrentLocation = Character.GetActorLocation();
+			const FVector CurrentTargetLocation = CurrentLocation + (TargetRelativeLocation - CurrentRelativeLocation);
+			const FVector LocDiff = MoveComponent.UpdatedComponent->GetComponentLocation() - CurrentLocation;
+			const float DebugLifetime = 5.0f;
+
+			// Current
+			DrawDebugCapsule(Character.GetWorld(), MoveComponent.UpdatedComponent->GetComponentLocation(), Character.GetSimpleCollisionHalfHeight(), Character.GetSimpleCollisionRadius(), FQuat::Identity, FColor::Red, false, DebugLifetime);
+
+			// Current Target
+			DrawDebugCapsule(Character.GetWorld(), CurrentTargetLocation + LocDiff, Character.GetSimpleCollisionHalfHeight(), Character.GetSimpleCollisionRadius(), FQuat::Identity, FColor::Green, false, DebugLifetime);
+
+			// Target
+			DrawDebugCapsule(Character.GetWorld(), CurrentTargetLocation + LocDiff, Character.GetSimpleCollisionHalfHeight(), Character.GetSimpleCollisionRadius(), FQuat::Identity, FColor::Blue, false, DebugLifetime);
+
+			// Force
+			DrawDebugLine(Character.GetWorld(), CurrentLocation, CurrentLocation+Force, FColor::Blue, false, DebugLifetime);
+
+			// Halfway point
+			const FVector HalfwayLocation = CurrentLocation + (GetRelativeLocation(0.5f) - CurrentRelativeLocation);
+			if (SavedHalfwayLocation.IsNearlyZero())
+			{
+				SavedHalfwayLocation = HalfwayLocation;
+			}
+			if (FVector::DistSquared(SavedHalfwayLocation, HalfwayLocation) > 50.f*50.f)
+			{
+				UE_LOG(LogRootMotion, Verbose, TEXT("RootMotion JumpForce drifted from saved halfway calculation!"));
+				SavedHalfwayLocation = HalfwayLocation;
+			}
+			DrawDebugCapsule(Character.GetWorld(), HalfwayLocation + LocDiff, Character.GetSimpleCollisionHalfHeight(), Character.GetSimpleCollisionRadius(), FQuat::Identity, FColor::White, true, DebugLifetime);
+
+			// Destination point
+			const FVector DestinationLocation = CurrentLocation + (GetRelativeLocation(1.0f) - CurrentRelativeLocation);
+			DrawDebugCapsule(Character.GetWorld(), DestinationLocation + LocDiff, Character.GetSimpleCollisionHalfHeight(), Character.GetSimpleCollisionRadius(), FQuat::Identity, FColor::White, true, DebugLifetime);
+
+			UE_LOG(LogRootMotion, VeryVerbose, TEXT("RootMotionJumpForce %s %s preparing from %f to %f from (%s) to (%s) resulting force %s"), 
+				Character.GetLocalRole() == ROLE_AutonomousProxy ? TEXT("AUTONOMOUS") : TEXT("AUTHORITY"),
+				Character.bClientUpdating ? TEXT("UPD") : TEXT("NOR"),
+				GetTime(), GetTime() + SimulationTime, 
+				*CurrentLocation.ToString(), *CurrentTargetLocation.ToString(), 
+				*Force.ToString());
+
+			{
+				FString AdjustedDebugString = FString::Printf(TEXT("    FRootMotionSource_JumpForce::Prep Force(%s) SimTime(%.3f) MoveTime(%.3f) StartP(%.3f) EndP(%.3f)"),
+					*Force.ToCompactString(), SimulationTime, MovementTickTime, CurrentMoveFraction, TargetMoveFraction);
+				RootMotionSourceDebug::PrintOnScreen(Character, AdjustedDebugString);
+			}
+		}
+#endif
+
+		const FTransform NewTransform(Force);
+		RootMotionParams.Set(NewTransform);
+	}
+	else
+	{
+		checkf(Duration > SMALL_NUMBER, TEXT("FRootMotionSource_JumpForce prepared with invalid duration."));
+	}
+
+	SetTime(GetTime() + SimulationTime);
+}
+
+bool FRootMotionSource_JumpForce_WithPoints::NetSerialize(FArchive& Ar, UPackageMap* Map, bool& bOutSuccess)
+{
+	if (!FRootMotionSource::NetSerialize(Ar, Map, bOutSuccess))
+	{
+		return false;
+	}
+
+	
+	Ar << bDisableTimeout;
+	Ar << TimeMappingCurve;
+
+	bOutSuccess = true;
+	return true;
+
+}
+
+FVector FRootMotionSource_JumpForce_WithPoints::GetPathOffset(float MoveFraction) const
+{
+	FVector PathOffset(FVector::ZeroVector);
+	if (PathOffsetCurve)
+	{
+		// Calculate path offset
+		PathOffset = URMSLibrary::EvaluateVectorCurveAtFraction(*PathOffsetCurve, MoveFraction);
+	}
+	else
+	{
+		// Default to "jump parabola", a simple x^2 shifted to be upside-down and shifted
+		// to get [0,1] X (MoveFraction/Distance) mapping to [0,1] Y (height)
+		// Height = -(2x-1)^2 + 1
+		const float Phi = 2.f*MoveFraction - 1;
+		const float Z = -(Phi*Phi) + 1;
+		PathOffset.Z = Z;
+	}
+
+	// Scale Z offset to height. If Height < 0, we use direct path offset values
+	if (SavedHeight >= 0.f)
+	{
+		PathOffset.Z *= SavedHeight;
+	}
+
+	return PathOffset;
+}
+
+FVector FRootMotionSource_JumpForce_WithPoints::GetRelativeLocation(float MoveFraction) const
+{
+	// Given MoveFraction, what relative location should a character be at?
+	FRotator FacingRotation(SavedRotation);
+	FacingRotation.Pitch = 0.f; // By default we don't include pitch, but an option could be added if necessary
+
+	FVector RelativeLocationFacingSpace = FVector(MoveFraction * SavedDistance, 0.f, 0.f) + GetPathOffset(MoveFraction);
+
+	return FacingRotation.RotateVector(RelativeLocationFacingSpace);
+}
+
+bool FRootMotionSource_JumpForce_WithPoints::IsTimeOutEnabled() const
+{
+	if (bDisableTimeout)
+	{
+		return false;
+	}
+	return FRootMotionSource::IsTimeOutEnabled();
+}
+
+FRootMotionSource* FRootMotionSource_JumpForce_WithPoints::Clone() const
+{
+	FRootMotionSource_JumpForce_WithPoints* CopyPtr = new FRootMotionSource_JumpForce_WithPoints(*this);
+	return CopyPtr;
+}
+
+bool FRootMotionSource_JumpForce_WithPoints::Matches(const FRootMotionSource* Other) const
+{
+	return FRootMotionSource::Matches(Other);
+}
+
+bool FRootMotionSource_JumpForce_WithPoints::MatchesAndHasSameState(const FRootMotionSource* Other) const
+{
+	if (!FRootMotionSource::MatchesAndHasSameState(Other))
+	{
+		return false;
+	}
+
+	return true;
+}
+
+UScriptStruct* FRootMotionSource_JumpForce_WithPoints::GetScriptStruct() const
+{
+	return FRootMotionSource_JumpForce_WithPoints::StaticStruct();
+}
+
+FString FRootMotionSource_JumpForce_WithPoints::ToSimpleString() const
+{
+	return FString::Printf(
+		TEXT("[ID:%u]FRootMotionSource_JumpForce_WithPoints %s"), LocalID, *InstanceName.GetPlainNameString());;
+}
+
+void FRootMotionSource_JumpForce_WithPoints::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	Collector.AddReferencedObject(RotationSetting.Curve);
+	Collector.AddReferencedObject(TimeMappingCurve);
+	FRootMotionSource::AddReferencedObjects(Collector);
+}
+void FRootMotionSource_JumpForce_WithPoints::InitPath(const ACharacter& Character)
+{
+	if (RotationSetting.Mode == ERMSRotationMode::None)
+	{
+		SavedRotation = StartRotation;
+			//(TargetLocation - StartLocation).Rotation();
+	}
+	if (!PathOffsetCurve)
+	{
+		PathOffsetCurve = NewObject<UCurveVector>();
+	}
+	const bool bDebug = RMS::CVarRMS_Debug->GetInt()>0;
+
+	const float Dist1toMid = (HalfWayLocation - StartLocation).Size();
+	const float DistMidto2 = (HalfWayLocation - TargetLocation).Size();
+	const float Dist1to2 = (StartLocation - TargetLocation).Size();
+	FVector AvgMidPoint = (StartLocation + TargetLocation) * 0.5;
+	AvgMidPoint.Z = HalfWayLocation.Z;
+	const float Dist1toAvgMid = (AvgMidPoint - StartLocation).Size();
+	const float DistAvgMidto2 = (AvgMidPoint - TargetLocation).Size();
+	SavedDistance = Dist1to2;
+	SavedHeight = FMath::Abs(HalfWayLocation.Z - StartLocation.Z);
+	float Duration1toMid = Duration * (Dist1toMid / (Dist1toMid + DistMidto2));
+	float DurationMidto2 = Duration * (DistMidto2 / (Dist1toMid + DistMidto2));
+	if (bDebug)
+	{
+		DrawDebugSphere(Character.GetWorld(), HalfWayLocation,15,8,FColor::Green,false,5,0.1);
+		DrawDebugSphere(Character.GetWorld(), AvgMidPoint,15,8,FColor::Green,false,5,0.1);
+	}
+	FRichCurve XCurve;
+	FRichCurve ZCurve;
+	//根据这个持续时间遍历
+	for (float i = 0; i <= Duration; i += Duration / 64.0)
+	{
+		const float MoveFraction = i / Duration;
+		const float Phi = 2.f * MoveFraction - 1;
+		const float Z = -(Phi * Phi) + 1;
+
+		ZCurve.AddKey(i / Duration, Z);
+		//处理X
+		const float MidFrac = Dist1toMid / (Dist1toMid + DistMidto2);
+		const float CurrDist = MoveFraction * (Dist1toMid + DistMidto2);
+		const float CurrDistAvg = MoveFraction * (Dist1toAvgMid + DistAvgMidto2);
+		//在前半段
+		float X, AvgX;
+		if (CurrDist <= Dist1toMid)
+		{
+			FVector CurrPoint = StartLocation + (CurrDist / Dist1toMid) * (HalfWayLocation - StartLocation);
+			X = (CurrPoint - StartLocation).Size2D();
+			if (bDebug)
+			{
+				DrawDebugSphere(Character.GetWorld(), CurrPoint, 5,4,FColor::Green,false,5,0.5);
+			}
+		}
+		else
+		{
+			FVector CurrPoint = HalfWayLocation + ((CurrDist - Dist1toMid) / DistMidto2) * (TargetLocation - HalfWayLocation);
+			X = (CurrPoint - StartLocation).Size2D();
+			if (bDebug)
+			{
+				DrawDebugSphere(Character.GetWorld(), CurrPoint, 5,4,FColor::Green,false,5,0.5);
+			}
+		}
+		if (CurrDistAvg <= Dist1toAvgMid)
+		{
+			FVector CurrPoint = StartLocation + (CurrDistAvg / Dist1toAvgMid) * (AvgMidPoint - StartLocation);
+			AvgX = (CurrPoint - StartLocation).Size2D();
+			if (bDebug)
+			{
+				DrawDebugSphere(Character.GetWorld(), CurrPoint, 5,4,FColor::Red,false,5,0.5);
+			}
+		}
+		else
+		{
+			FVector CurrPoint = AvgMidPoint + ((CurrDistAvg - Dist1toAvgMid) / DistAvgMidto2) * (TargetLocation - AvgMidPoint);
+			AvgX = (CurrPoint - StartLocation).Size2D();
+			if (bDebug)
+			{
+				DrawDebugSphere(Character.GetWorld(), CurrPoint, 5,4,FColor::Red,false,5,0.5);
+			}
+		}
+		XCurve.AddKey(i / Duration, X - AvgX);
+	}
+	XCurve.AddKey(1, 0);
+	ZCurve.AddKey(1, 0);
+	PathOffsetCurve->FloatCurves[0] = XCurve;
+	PathOffsetCurve->FloatCurves[2] = ZCurve;
+}
+
+
+#pragma endregion Jump
+
+
+//*******************************************************************
 FRootMotionSource_MoveToForce_WithRotation::FRootMotionSource_MoveToForce_WithRotation()
 {
 }
@@ -323,6 +655,81 @@ void FRootMotionSource_MoveToForce_WithRotation::PrepareRootMotion(float Simulat
 		FRootMotionSource_MoveToForce::PrepareRootMotion(SimulationTime, MovementTickTime, Character,
 		                                                 MoveComponent);
 	}
+}
+
+UScriptStruct* FRootMotionSource_MoveToForce_WithRotation::GetScriptStruct() const
+{
+	return FRootMotionSource_MoveToForce_WithRotation::StaticStruct();
+}
+
+FString FRootMotionSource_MoveToForce_WithRotation::ToSimpleString() const
+{
+	return FString::Printf(
+		TEXT("[ID:%u]FRootMotionSource_MoveToForce_WithRotation %s"), LocalID, *InstanceName.GetPlainNameString());
+}
+
+void FRootMotionSource_MoveToForce_WithRotation::AddReferencedObjects(FReferenceCollector& Collector)
+{
+	
+	Collector.AddReferencedObject(RotationSetting.Curve);
+	
+	
+	FRootMotionSource::AddReferencedObjects(Collector);
+}
+
+bool FRootMotionSource_MoveToForce_WithRotation::NetSerialize(FArchive& Ar, UPackageMap* Map, bool& bOutSuccess)
+{
+	if (!FRootMotionSource::NetSerialize(Ar, Map, bOutSuccess))
+	{
+		return false;
+	}
+
+	Ar << StartLocation;
+	Ar << RotationSetting;
+	Ar << StartLocation; // TODO-RootMotionSource: Quantization
+	Ar << TargetLocation; // TODO-RootMotionSource: Quantization
+	Ar << bRestrictSpeedToExpected;
+	//Ar << PathOffsetCurve;
+
+	bOutSuccess = true;
+	return true;
+}
+
+FRootMotionSource* FRootMotionSource_MoveToForce_WithRotation::Clone() const
+{
+	FRootMotionSource_MoveToForce_WithRotation* CopyPtr = new FRootMotionSource_MoveToForce_WithRotation(*this);
+	return CopyPtr;
+}
+
+bool FRootMotionSource_MoveToForce_WithRotation::Matches(const FRootMotionSource* Other) const
+{
+	if (!FRootMotionSource::Matches(Other))
+	{
+		return false;
+	}
+	const FRootMotionSource_MoveToForce_WithRotation* OtherCast = static_cast<const FRootMotionSource_MoveToForce_WithRotation*>(Other);
+
+	return RotationSetting == OtherCast->RotationSetting && StartRotation == OtherCast->StartRotation;
+}
+
+bool FRootMotionSource_MoveToForce_WithRotation::MatchesAndHasSameState(const FRootMotionSource* Other) const
+{
+	if (!FRootMotionSource::MatchesAndHasSameState(Other))
+	{
+		return false;
+	}
+
+	return true;
+}
+
+bool FRootMotionSource_MoveToForce_WithRotation::UpdateStateFrom(const FRootMotionSource* SourceToTakeStateFrom, bool bMarkForSimulatedCatchup)
+{
+	if (!FRootMotionSource::UpdateStateFrom(SourceToTakeStateFrom, bMarkForSimulatedCatchup))
+	{
+		return false;
+	}
+
+	return true;
 }
 
 void FRootMotionSource_MoveToDynamicForce_WithRotation::PrepareRootMotion(float SimulationTime, float MovementTickTime,
@@ -424,6 +831,60 @@ void FRootMotionSource_MoveToDynamicForce_WithRotation::PrepareRootMotion(float 
 		FRootMotionSource_MoveToDynamicForce::PrepareRootMotion(SimulationTime, MovementTickTime, Character,
 		                                                        MoveComponent);
 	}
+}
+
+UScriptStruct* FRootMotionSource_MoveToDynamicForce_WithRotation::GetScriptStruct() const
+{
+	return FRootMotionSource_MoveToDynamicForce_WithRotation::StaticStruct();
+}
+
+bool FRootMotionSource_MoveToDynamicForce_WithRotation::NetSerialize(FArchive& Ar, UPackageMap* Map, bool& bOutSuccess)
+{
+
+	if (!FRootMotionSource::NetSerialize(Ar, Map, bOutSuccess))
+	{
+		return false;
+	}
+	Ar << StartRotation;
+	Ar << StartLocation; // TODO-RootMotionSource: Quantization
+	Ar << InitialTargetLocation; // TODO-RootMotionSource: Quantization
+	Ar << TargetLocation; // TODO-RootMotionSource: Quantization
+	Ar << bRestrictSpeedToExpected;
+	Ar << RotationSetting;
+	//Ar << PathOffsetCurve;
+	//Ar << TimeMappingCurve;
+
+	bOutSuccess = true;
+	return true;
+	
+	//return FRootMotionSource_MoveToDynamicForce::NetSerialize(Ar, Map, bOutSuccess);
+}
+
+FRootMotionSource* FRootMotionSource_MoveToDynamicForce_WithRotation::Clone() const
+{
+	FRootMotionSource_MoveToDynamicForce_WithRotation* CopyPtr = new FRootMotionSource_MoveToDynamicForce_WithRotation(*this);
+	return CopyPtr;
+}
+
+bool FRootMotionSource_MoveToDynamicForce_WithRotation::Matches(const FRootMotionSource* Other) const
+{
+	if (!FRootMotionSource::Matches(Other))
+	{
+		return false;
+	}
+	const FRootMotionSource_MoveToDynamicForce_WithRotation* OtherCast = static_cast<const FRootMotionSource_MoveToDynamicForce_WithRotation*>(Other);
+
+	return RotationSetting == OtherCast->RotationSetting && StartRotation == OtherCast->StartRotation;
+}
+
+bool FRootMotionSource_MoveToDynamicForce_WithRotation::MatchesAndHasSameState(const FRootMotionSource* Other) const
+{
+	if (!FRootMotionSource::MatchesAndHasSameState(Other))
+	{
+		return false;
+	}
+
+	return true;
 }
 #pragma endregion FRootMotionSource_PathMoveToForce
 

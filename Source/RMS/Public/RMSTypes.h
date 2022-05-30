@@ -13,9 +13,6 @@ static TAutoConsoleVariable<int32> CVarRMS_Debug(TEXT("b.RMS.Debug"), 0, TEXT("0
 }
 
 
-
-
-
 UENUM(BlueprintType)
 enum class ERMSApplyMode :uint8
 {
@@ -94,6 +91,7 @@ enum class ERMSRotationMode : uint8
 	FaceToTarget,
 	Custom
 };
+
 USTRUCT(BlueprintType)
 struct FRMSRotationSetting
 {
@@ -101,22 +99,25 @@ struct FRMSRotationSetting
 public:
 	friend FArchive& operator <<(FArchive& Ar, FRMSRotationSetting& D)
 	{
-		return Ar << D.Mode << D.Curve << D.WarpMultiplier << D.TargetRotation ;
+		return Ar << D.Mode << D.WarpMultiplier << D.TargetRotation;
 	}
+
 	bool operator==(const FRMSRotationSetting& Other) const
 	{
 		return Mode == Other.Mode && Curve == Other.Curve && WarpMultiplier == Other.WarpMultiplier &&
-			TargetRotation == Other.TargetRotation ;
+			TargetRotation == Other.TargetRotation;
 	}
+
 	bool operator!=(const FRMSRotationSetting& Other) const
 	{
 		return !(*this == Other);
 	}
 
-	FORCEINLINE bool IsWarpRotation()const
+	FORCEINLINE bool IsWarpRotation() const
 	{
 		return Mode != ERMSRotationMode::None;
 	}
+
 	//旋转模式, 如果是None就没有旋转
 	UPROPERTY(BlueprintReadWrite)
 	ERMSRotationMode Mode = ERMSRotationMode::None;
@@ -128,7 +129,7 @@ public:
 	float WarpMultiplier = 1.0f;
 	//如果RotationMode == Custom, 那么此Rotator就是最终的目标旋转量
 	UPROPERTY(BlueprintReadWrite)
-	FRotator TargetRotation =  FRotator::ZeroRotator;
+	FRotator TargetRotation = FRotator::ZeroRotator;
 };
 
 
@@ -145,19 +146,19 @@ public:
 	TObjectPtr<UCurveVector> PathOffsetCurve = nullptr;
 	UPROPERTY(BlueprintReadWrite)
 	TObjectPtr<UCurveFloat> TimeMappingCurve = nullptr;
-	
+
 	UPROPERTY(BlueprintReadWrite)
 	FRMSRotationSetting RotationSetting;
 
 	friend FArchive& operator <<(FArchive& Ar, FRMSPathMoveToData& D)
 	{
-		return Ar << D.Duration << D.Target << D.PathOffsetCurve << D.TimeMappingCurve << D.RotationSetting ;
+		return Ar << D.Duration << D.Target << D.PathOffsetCurve << D.TimeMappingCurve << D.RotationSetting;
 	}
 
 	bool operator==(const FRMSPathMoveToData& Other) const
 	{
 		return Target == Other.Target && Duration == Other.Duration && PathOffsetCurve == Other.PathOffsetCurve &&
-			TimeMappingCurve == Other.TimeMappingCurve && RotationSetting == Other.RotationSetting ;
+			TimeMappingCurve == Other.TimeMappingCurve && RotationSetting == Other.RotationSetting;
 	}
 
 	bool operator!=(const FRMSPathMoveToData& Other) const
@@ -170,7 +171,6 @@ public:
 		return Duration > 0;
 	}
 };
-
 
 
 USTRUCT(BlueprintType)
@@ -211,7 +211,7 @@ public:
 };
 
 USTRUCT(BlueprintType)
-struct FRMSAnimWarppingConfig 
+struct FRMSAnimWarppingConfig
 {
 	GENERATED_BODY()
 public:
@@ -257,10 +257,10 @@ struct FRMSNotifyTriggerData
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Defaults")
 	bool bHasTarget = false;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Defaults")
 	FRMSRotationSetting RotationSetting;
-	
+
 	bool operator ==(const FRMSNotifyTriggerData& other) const
 	{
 		return WindowData.AnimNotify == other.WindowData.AnimNotify &&
@@ -268,7 +268,7 @@ struct FRMSNotifyTriggerData
 			WindowData.StartTime == other.WindowData.StartTime &&
 			Target == other.Target &&
 			bHasTarget == other.bHasTarget &&
-				RotationSetting == other.RotationSetting;
+			RotationSetting == other.RotationSetting;
 	}
 
 	bool operator !=(const FRMSNotifyTriggerData& other) const
@@ -299,9 +299,10 @@ struct FRMSTarget
 	virtual ~FRMSTarget()
 	{
 	}
+
 	friend FArchive& operator <<(FArchive& Ar, FRMSTarget& D)
 	{
-		return Ar << D.Target << D.StartTime << D.EndTime ;
+		return Ar << D.Target << D.StartTime << D.EndTime;
 	}
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Defaults")
@@ -313,7 +314,7 @@ struct FRMSTarget
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Defaults")
 	FRMSRotationSetting RotationSetting;
 
-	virtual bool operator ==(const FRMSTarget& other)const
+	virtual bool operator ==(const FRMSTarget& other) const
 	{
 		return
 			StartTime == other.StartTime &&
@@ -322,18 +323,16 @@ struct FRMSTarget
 			RotationSetting == other.RotationSetting;
 	}
 
-	virtual bool operator !=(const FRMSTarget& other)const
+	virtual bool operator !=(const FRMSTarget& other) const
 	{
 		return !((*this) == other);
 	}
 
 	FORCEINLINE void Reset()
 	{
-		
 		EndTime = 0;
 		StartTime = 0;
 		Target = FVector::ZeroVector;
 		RotationSetting = FRMSRotationSetting();
-		
 	}
 };

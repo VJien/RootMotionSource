@@ -62,6 +62,27 @@ public:
 	                                             ERMSApplyMode ApplyMode =
 		                                             ERMSApplyMode::None,
 	                                             FRMSSetting_Jump ExtraSetting = {});
+
+	//通过高度和距离适配一个抛物线跳跃运动
+	UFUNCTION(BlueprintCallable, Category="RMS",
+		meta = (AdvancedDisplay = "7", AutoCreateRefTerm = "ExtraSetting", CPP_Default_ExtraSetting))
+	static int32 ApplyRootMotionSource_JumpForce_WithPoints(UCharacterMovementComponent* MovementComponent,
+	                                                        FName InstanceName,
+	                                                        FRotator StartRotation,
+	                                                        float Duration,
+	                                                        FVector StartLocation,
+	                                                        FVector TargetLocation,
+	                                                        FVector HalfWayLocation,
+	                                                        int32 Priority,
+	                                                        FRMSRotationSetting RotationSetting,
+	                                                        UCurveFloat* TimeMappingCurve = nullptr,
+	                                                        float StartTime = 0,
+	                                                        ERMSApplyMode ApplyMode =
+		                                                        ERMSApplyMode::None,
+	                                                        FRMSSetting_Jump ExtraSetting = {});
+
+
+	
 	/**
 	* 移动到一个动态目标, 需要通过UpdateDynamicMoveToTarget设置目标
 	* @param StartLocation      角色会基于此开始移动,所以请确保是Actor当前的Location

@@ -119,6 +119,39 @@ int32 URMSLibrary::ApplyRootMotionSource_JumpForce(UCharacterMovementComponent* 
 	return MovementComponent->ApplyRootMotionSource(JumpForce);
 }
 
+int32 URMSLibrary::ApplyRootMotionSource_JumpForce_WithPoints(UCharacterMovementComponent* MovementComponent, FName InstanceName, FRotator StartRotation, float Duration, FVector StartLocation, FVector TargetLocation, FVector HalfWayLocation,
+	int32 Priority, FRMSRotationSetting RotationSetting, UCurveFloat* TimeMappingCurve, float StartTime, ERMSApplyMode ApplyMode, FRMSSetting_Jump Setting)
+{
+	if (!MovementComponent)
+	{
+		return -1;
+	}
+	const int32 NewPriority = CalcPriorityByApplyMode(MovementComponent, InstanceName, Priority, ApplyMode);
+	if (NewPriority < 0)
+	{
+		return -1;
+	}
+	TSharedPtr<FRootMotionSource_JumpForce_WithPoints> JumpForce = MakeShared<FRootMotionSource_JumpForce_WithPoints>();
+	JumpForce->InstanceName = InstanceName == NAME_None ? TEXT("Jump") : InstanceName;
+	JumpForce->AccumulateMode = Setting.AccumulateMod;
+	JumpForce->Priority = NewPriority;
+	JumpForce->Duration = Duration;
+	JumpForce->StartLocation = StartLocation;
+	JumpForce->StartRotation = StartRotation;
+	JumpForce->HalfWayLocation = HalfWayLocation;
+	JumpForce->TargetLocation = TargetLocation;
+	JumpForce->bDisableTimeout = Setting.bFinishOnLanded; // If we finish on landed, we need to disable force's timeout
+	JumpForce->RotationSetting = RotationSetting;
+	JumpForce->TimeMappingCurve = TimeMappingCurve;
+	JumpForce->FinishVelocityParams.Mode = static_cast<ERootMotionFinishVelocityMode>(static_cast<uint8>(Setting.
+		VelocityOnFinishMode));
+	JumpForce->FinishVelocityParams.SetVelocity = Setting.FinishSetVelocity;
+	JumpForce->FinishVelocityParams.ClampVelocity = Setting.FinishClampVelocity;
+	JumpForce->SetTime(StartTime);
+	return MovementComponent->ApplyRootMotionSource(JumpForce);
+	
+}
+
 int32 URMSLibrary::ApplyRootMotionSource_DynamicMoveToForce(UCharacterMovementComponent* MovementComponent,
                                                             FName InstanceName, FVector StartLocation,
                                                             FVector TargetLocation, float Duration,
