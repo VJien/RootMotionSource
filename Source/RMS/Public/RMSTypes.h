@@ -9,7 +9,7 @@
 
 namespace RMS
 {
-static TAutoConsoleVariable<int32> CVarRMS_Debug(TEXT("b.RMS.Debug"), 0, TEXT("0: Disable 1: Enable "), ECVF_Cheat);
+RMS_API extern TAutoConsoleVariable<int32> CVarRMS_Debug;
 }
 
 

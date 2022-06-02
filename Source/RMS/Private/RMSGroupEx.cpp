@@ -473,6 +473,7 @@ void FRootMotionSource_JumpForce_WithPoints::AddReferencedObjects(FReferenceColl
 {
 	Collector.AddReferencedObject(RotationSetting.Curve);
 	Collector.AddReferencedObject(TimeMappingCurve);
+	Collector.AddReferencedObject(PathOffsetCurve);
 	FRootMotionSource::AddReferencedObjects(Collector);
 }
 void FRootMotionSource_JumpForce_WithPoints::InitPath(const ACharacter& Character)
@@ -501,8 +502,8 @@ void FRootMotionSource_JumpForce_WithPoints::InitPath(const ACharacter& Characte
 	float DurationMidto2 = Duration * (DistMidto2 / (Dist1toMid + DistMidto2));
 	if (bDebug)
 	{
-		DrawDebugSphere(Character.GetWorld(), HalfWayLocation,15,8,FColor::Green,false,5,0.1);
-		DrawDebugSphere(Character.GetWorld(), AvgMidPoint,15,8,FColor::Green,false,5,0.1);
+		DrawDebugSphere(Character.GetWorld(), HalfWayLocation,15.0,8,FColor::Green,false,5.0,0,0.1);
+		DrawDebugSphere(Character.GetWorld(), AvgMidPoint,15.0,8,FColor::Green,false,5.0,0,0.1);
 	}
 	FRichCurve XCurve;
 	FRichCurve ZCurve;
@@ -526,7 +527,7 @@ void FRootMotionSource_JumpForce_WithPoints::InitPath(const ACharacter& Characte
 			X = (CurrPoint - StartLocation).Size2D();
 			if (bDebug)
 			{
-				DrawDebugSphere(Character.GetWorld(), CurrPoint, 5,4,FColor::Green,false,5,0.5);
+				DrawDebugSphere(Character.GetWorld(), CurrPoint, 5.0,4,FColor::Green,false,5.0,0,0.5);
 			}
 		}
 		else
@@ -535,7 +536,7 @@ void FRootMotionSource_JumpForce_WithPoints::InitPath(const ACharacter& Characte
 			X = (CurrPoint - StartLocation).Size2D();
 			if (bDebug)
 			{
-				DrawDebugSphere(Character.GetWorld(), CurrPoint, 5,4,FColor::Green,false,5,0.5);
+				DrawDebugSphere(Character.GetWorld(), CurrPoint, 5.0,4,FColor::Green,false,5.0,0,0.5);
 			}
 		}
 		if (CurrDistAvg <= Dist1toAvgMid)
@@ -544,7 +545,7 @@ void FRootMotionSource_JumpForce_WithPoints::InitPath(const ACharacter& Characte
 			AvgX = (CurrPoint - StartLocation).Size2D();
 			if (bDebug)
 			{
-				DrawDebugSphere(Character.GetWorld(), CurrPoint, 5,4,FColor::Red,false,5,0.5);
+				DrawDebugSphere(Character.GetWorld(), CurrPoint, 5.0,4,FColor::Red,false,5.0,0,0.5);
 			}
 		}
 		else
@@ -553,13 +554,13 @@ void FRootMotionSource_JumpForce_WithPoints::InitPath(const ACharacter& Characte
 			AvgX = (CurrPoint - StartLocation).Size2D();
 			if (bDebug)
 			{
-				DrawDebugSphere(Character.GetWorld(), CurrPoint, 5,4,FColor::Red,false,5,0.5);
+				DrawDebugSphere(Character.GetWorld(), CurrPoint, 5.0,4,FColor::Red,false,5.0,0,0.5);
 			}
 		}
 		XCurve.AddKey(i / Duration, X - AvgX);
 	}
-	XCurve.AddKey(1, 0);
-	ZCurve.AddKey(1, 0);
+	XCurve.AddKey(1.0, 0.0);
+	ZCurve.AddKey(1.0, 0.0);
 	PathOffsetCurve->FloatCurves[0] = XCurve;
 	PathOffsetCurve->FloatCurves[2] = ZCurve;
 }
