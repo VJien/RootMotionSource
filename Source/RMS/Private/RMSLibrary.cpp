@@ -328,6 +328,90 @@ int32 URMSLibrary::ApplyRootMotionSource_PathMoveToForce(UCharacterMovementCompo
 	return MovementComponent->ApplyRootMotionSource(PathMoveTo);
 }
 
+int32 URMSLibrary::ApplyRootMotionSource_PathMoveToForce_V2(UCharacterMovementComponent* MovementComponent,
+	FName InstanceName, FRotator StartRotation, TArray<FVector> Path, int32 Priority, float StartTime,float Duration,
+	FRMSRotationSetting RotationSetting, ERMSApplyMode ApplyMode, FRMSSetting_Move Setting, ERichCurveTangentMode TangentMode,
+													  ERichCurveInterpMode InterpMode)
+{
+	const int32 PathNum = Path.Num();
+if (!MovementComponent || Duration <= 0 || PathNum<2)
+	{
+		return -1;
+	}
+	const int32 NewPriority = CalcPriorityByApplyMode(MovementComponent, InstanceName, Priority, ApplyMode);
+	if (NewPriority < 0)
+	{
+		return -1;
+	}
+	TSharedPtr<FRootMotionSource_MoveToDynamicForce_WithRotation> MoveToForce = MakeShared<
+		FRootMotionSource_MoveToDynamicForce_WithRotation>();
+	MoveToForce->InstanceName = InstanceName == NAME_None ? TEXT("PathMoveToV2") : InstanceName;
+	MoveToForce->AccumulateMode = Setting.AccumulateMod;
+	MoveToForce->Settings.SetFlag(
+		static_cast<ERootMotionSourceSettingsFlags>(static_cast<uint8>(Setting.SourcesSetting)));
+	MoveToForce->Priority = NewPriority;
+	MoveToForce->StartLocation = Path[0];
+	MoveToForce->Duration = Duration;
+	MoveToForce->StartRotation = MovementComponent->GetOwner()->GetActorRotation();
+	MoveToForce->bRestrictSpeedToExpected = Setting.bRestrictSpeedToExpected;
+	MoveToForce->TargetLocation = Path.Last();
+
+	UCurveVector* PathCurve = NewObject<UCurveVector>();
+	const bool bUseTotalOffset = false;
+	
+	if (PathNum>2)
+	{
+		auto SetCurve_Lambda = [=](FRichCurve& Curve, float Time, float Value, ERichCurveTangentMode Tangent, ERichCurveInterpMode Interp)
+		{
+			auto Handle = Curve.AddKey(Time, Value);
+			Curve.SetKeyTangentMode(Handle,Tangent);
+			Curve.SetKeyInterpMode(Handle,Interp);
+		};
+		FRichCurve XCurve;
+		FRichCurve YCurve;
+		FRichCurve ZCurve;
+		FVector Start =  Path[0];
+		FVector Target = Path.Last();
+		FVector Dir = Target - Start;
+		
+		SetCurve_Lambda(XCurve,0,0,TangentMode,InterpMode);
+		SetCurve_Lambda(YCurve,0,0,TangentMode,InterpMode);
+		SetCurve_Lambda(ZCurve,0,0,TangentMode,InterpMode);
+	
+		
+		for (int32 i = 1; i < PathNum - 1; i ++)
+		{  
+			const float Frac = float(i) / float(PathNum - 1);
+			const FVector CurrPoint = Start + Frac * Dir;
+			FVector Offset = Path[i] - CurrPoint;
+
+			SetCurve_Lambda(XCurve,Frac,Offset.X,TangentMode,InterpMode);
+			SetCurve_Lambda(YCurve,Frac,Offset.Y,TangentMode,InterpMode);
+			SetCurve_Lambda(ZCurve,Frac,Offset.Z,TangentMode,InterpMode);
+			
+		}
+		
+		SetCurve_Lambda(XCurve,1,0,TangentMode,InterpMode);
+		SetCurve_Lambda(YCurve,1,0,TangentMode,InterpMode);
+		SetCurve_Lambda(ZCurve,1,0,TangentMode,InterpMode);
+
+		
+		PathCurve->FloatCurves[0] = XCurve;
+		PathCurve->FloatCurves[1] = YCurve;
+		PathCurve->FloatCurves[2] = ZCurve;
+	}
+	
+	MoveToForce->PathOffsetCurve = PathCurve;
+	MoveToForce->FinishVelocityParams.Mode = static_cast<ERootMotionFinishVelocityMode>(static_cast<uint8>(Setting.
+		VelocityOnFinishMode));
+	MoveToForce->FinishVelocityParams.SetVelocity = Setting.FinishSetVelocity;
+	MoveToForce->FinishVelocityParams.ClampVelocity = Setting.FinishClampVelocity;
+	MoveToForce->SetTime(StartTime);
+	MoveToForce->RotationSetting = RotationSetting;
+	return MovementComponent->ApplyRootMotionSource(MoveToForce);
+	
+}
+
 bool URMSLibrary::ApplyRootMotionSource_SimpleAnimation_BM(UCharacterMovementComponent* MovementComponent,
                                                            UAnimSequence* DataAnimation,
                                                            FName InstanceName,
@@ -358,7 +442,7 @@ bool URMSLibrary::ApplyRootMotionSource_SimpleAnimation_BM(UCharacterMovementCom
 		EndTime = Length;
 	}
 	const float Duration = EndTime - StartTime;
-	int32 NumFrame = DataAnimation->GetNumberOfSampledKeys();
+	int32 NumFrame = DataAnimation->GetNumberOfFrames();
 	const float FrameTime = DataAnimation->GetPlayLength() / NumFrame;
 	//开始位置
 	FVector StartLocation = Character->GetActorLocation();
@@ -467,7 +551,7 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationAdjustment_BM(
 	const float EndTime = (InEndTime < 0 || InEndTime > DataAnimation->GetPlayLength())
 		                      ? DataAnimation->GetPlayLength()
 		                      : InEndTime;
-	int32 NumFrame = DataAnimation->GetNumberOfSampledKeys();
+	int32 NumFrame = DataAnimation->GetNumberOfFrames();
 	const float FrameTime = DataAnimation->GetPlayLength() / NumFrame;
 
 	FVector StartLocation = Character->GetActorLocation();
@@ -479,7 +563,7 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationAdjustment_BM(
 		                                                            GetScaledCapsuleHalfHeight()));
 	FTransform RootMotion = DataAnimation->ExtractRootMotionFromRange(0, EndTime);
 	FTransform Mesh2Char = Mesh->GetComponentTransform().GetRelativeTransform(StartFootTransform);
-	Mesh2Char.SetLocation(FVector::Zero());
+	Mesh2Char.SetLocation(FVector::ZeroVector);
 	const FVector TargetLocationActorSpace = (RootMotion * Mesh2Char).GetLocation();
 	//用动态曲线的方式 , 而非静态,
 	UCurveVector* OffsetCV = NewObject<UCurveVector>();
@@ -605,7 +689,7 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationAdjustment(UCharacterMovementCo
 	const float CurrEndTime = (EndTime < 0 || EndTime > DataAnimation->GetPlayLength())
 		                          ? DataAnimation->GetPlayLength()
 		                          : EndTime;
-	const float Duration = (CurrEndTime - StartTime) / FMath::Max(Rate, 0.1);
+	const float Duration = (CurrEndTime - StartTime) / FMath::Max(Rate, 0.1f);
 	const float HalfHeight = Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
 	const FTransform FootTransform = FTransform(Character->GetActorQuat(),
 	                                            Character->GetActorLocation() - FVector(0, 0, HalfHeight));
@@ -680,7 +764,7 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationWarping_ForwardCalculation(
 		return false;
 	}
 	//动画基本数据
-	const int32 NumFrame = DataAnimation->GetNumberOfSampledKeys();
+	const int32 NumFrame = DataAnimation->GetNumberOfFrames();
 	const float FrameTime = DataAnimation->GetPlayLength() / NumFrame;
 	float AnimLength = DataAnimation->GetPlayLength();
 	float Duration = AnimLength / Rate;
@@ -783,7 +867,7 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationWarping_ForwardCalculation(
 	FVector StartLocation = Character->GetActorLocation();
 	//模型与角色的相对变换矩阵,我们只需要Rotation
 	FTransform Mesh2Char = Mesh->GetComponentTransform().GetRelativeTransform(Character->GetActorTransform());
-	Mesh2Char.SetLocation(FVector::Zero());
+	Mesh2Char.SetLocation(FVector::ZeroVector);
 
 	FVector LocalOffset = FVector::ZeroVector;
 	//******************
@@ -906,7 +990,7 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationWarping_ForwardCalculation(
 		//查找当前窗口的目标数据, 只在窗口改变以后的时候刷新
 		if (bNeedUpdateTarget || CurrentTime == 0)
 		{
-			if (TrigData.bHasTarget && TrigData.WindowData.AnimNotify)
+			if (TrigData.bHasTarget && TrigData.WindowData.AnimNotify.IsValid())
 			{
 				const auto target = WarpingTarget.Find(TrigData.WindowData.AnimNotify->RootMotionSourceTarget);
 				if (target)
@@ -1070,7 +1154,7 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationWarping(UCharacterMovementCompo
 		return false;
 	}
 	//动画基本数据
-	const int32 NumFrame = DataAnimation->GetNumberOfSampledKeys();
+	const int32 NumFrame = DataAnimation->GetNumberOfFrames();
 	const float FrameTime = DataAnimation->GetPlayLength() / NumFrame;
 	float AnimLength = DataAnimation->GetPlayLength();
 	float Duration = AnimLength / Rate;
@@ -1364,7 +1448,7 @@ bool URMSLibrary::ApplyRootMotionSource_SimpleAnimation(UCharacterMovementCompon
 	const float CurrEndTime = (EndTime < 0 || EndTime > DataAnimation->GetPlayLength())
 		                          ? DataAnimation->GetPlayLength()
 		                          : EndTime;
-	const float Duration = (CurrEndTime - StartTime) / FMath::Max(Rate, 0.1);
+	const float Duration = (CurrEndTime - StartTime) / FMath::Max(Rate, 0.1f);
 	TSharedPtr<FRootMotionSource_AnimWarping> RMS = MakeShared<FRootMotionSource_AnimWarping>();
 	RMS->InstanceName = InstanceName == NAME_None ? TEXT("MotioWarping") : InstanceName;
 	RMS->AccumulateMode = ERootMotionAccumulateMode::Override;
@@ -1730,7 +1814,7 @@ bool URMSLibrary::ExtractRotation(FRotator& OutRotation, const ACharacter& Chara
 		float RotationFraction = Fraction;
 		if (RotationCurve)
 		{
-			RotationFraction = FMath::Clamp(RotationCurve->GetFloatValue(RotationFraction), 0, 1);
+			RotationFraction = FMath::Clamp(RotationCurve->GetFloatValue(RotationFraction), 0.f, 1.f);
 		}
 		const float TargetYaw = TargetRotation.Yaw < 0 ? TargetRotation.Yaw + 360 : TargetRotation.Yaw;
 		const float StartYaw = StartRotation.Yaw < 0 ? StartRotation.Yaw + 360 : StartRotation.Yaw;

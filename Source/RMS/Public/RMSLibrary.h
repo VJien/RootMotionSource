@@ -152,6 +152,27 @@ public:
 		                                                   ERMSApplyMode::None,
 	                                                   FRMSSetting_Move ExtraSetting = {});
 
+	/**
+	* 按照路径点的曲线平滑移动
+	* 
+	*/
+	UFUNCTION(BlueprintCallable, Category="RMS",
+		meta = (AdvancedDisplay = "6", AutoCreateRefTerm = "ExtraSetting", CPP_Default_ExtraSetting,CPP_Default_RotationSetting))
+	static int32 ApplyRootMotionSource_PathMoveToForce_V2(UCharacterMovementComponent* MovementComponent,
+													   FName InstanceName,
+													   FRotator StartRotation,
+													   TArray<FVector> Path,
+													   int32 Priority,
+													   float StartTime = 0,
+													   float Duration = 1.0f,
+													   FRMSRotationSetting RotationSetting = {},
+													   ERMSApplyMode ApplyMode =
+														   ERMSApplyMode::None,
+													   FRMSSetting_Move ExtraSetting = {},
+													   ERichCurveTangentMode TangentMode =  ERichCurveTangentMode::RCTM_Auto,
+													  ERichCurveInterpMode InterpMode =  ERichCurveInterpMode::RCIM_Cubic);
+
+
 
 #pragma region Animation
 
