@@ -16,7 +16,7 @@
 
 class UAnimNotifyState_RMS_Warping;
 
-PRAGMA_DISABLE_OPTIMIZATION
+UE_DISABLE_OPTIMIZATION
 
 float URMSLibrary::EvaluateFloatCurveAtFraction(const UCurveFloat& Curve, const float Fraction)
 {
@@ -442,7 +442,7 @@ bool URMSLibrary::ApplyRootMotionSource_SimpleAnimation_BM(UCharacterMovementCom
 		EndTime = Length;
 	}
 	const float Duration = EndTime - StartTime;
-	int32 NumFrame = DataAnimation->GetNumberOfFrames();
+	int32 NumFrame = DataAnimation->GetNumberOfSampledKeys();
 	const float FrameTime = DataAnimation->GetPlayLength() / NumFrame;
 	//开始位置
 	FVector StartLocation = Character->GetActorLocation();
@@ -551,7 +551,7 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationAdjustment_BM(
 	const float EndTime = (InEndTime < 0 || InEndTime > DataAnimation->GetPlayLength())
 		                      ? DataAnimation->GetPlayLength()
 		                      : InEndTime;
-	int32 NumFrame = DataAnimation->GetNumberOfFrames();
+	int32 NumFrame = DataAnimation->GetNumberOfSampledKeys();
 	const float FrameTime = DataAnimation->GetPlayLength() / NumFrame;
 
 	FVector StartLocation = Character->GetActorLocation();
@@ -764,7 +764,7 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationWarping_ForwardCalculation(
 		return false;
 	}
 	//动画基本数据
-	const int32 NumFrame = DataAnimation->GetNumberOfFrames();
+	const int32 NumFrame = DataAnimation->GetNumberOfSampledKeys();
 	const float FrameTime = DataAnimation->GetPlayLength() / NumFrame;
 	float AnimLength = DataAnimation->GetPlayLength();
 	float Duration = AnimLength / Rate;
@@ -990,7 +990,7 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationWarping_ForwardCalculation(
 		//查找当前窗口的目标数据, 只在窗口改变以后的时候刷新
 		if (bNeedUpdateTarget || CurrentTime == 0)
 		{
-			if (TrigData.bHasTarget && TrigData.WindowData.AnimNotify.IsValid())
+			if (TrigData.bHasTarget && IsValid(TrigData.WindowData.AnimNotify))
 			{
 				const auto target = WarpingTarget.Find(TrigData.WindowData.AnimNotify->RootMotionSourceTarget);
 				if (target)
@@ -1154,7 +1154,7 @@ bool URMSLibrary::ApplyRootMotionSource_AnimationWarping(UCharacterMovementCompo
 		return false;
 	}
 	//动画基本数据
-	const int32 NumFrame = DataAnimation->GetNumberOfFrames();
+	const int32 NumFrame = DataAnimation->GetNumberOfSampledKeys();
 	const float FrameTime = DataAnimation->GetPlayLength() / NumFrame;
 	float AnimLength = DataAnimation->GetPlayLength();
 	float Duration = AnimLength / Rate;
@@ -1990,4 +1990,4 @@ bool URMSLibrary::PredictRootMotionSourceLocation_MoveToParabola(FVector& OutLoc
 	return true;
 }
 
-PRAGMA_ENABLE_OPTIMIZATION
+UE_ENABLE_OPTIMIZATION

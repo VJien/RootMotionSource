@@ -16,7 +16,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 
-PRAGMA_DISABLE_OPTIMIZATION
+UE_DISABLE_OPTIMIZATION
 
 
 #pragma region FRootMotionSource_PathMoveToForce
@@ -1616,4 +1616,4 @@ FString FRootMotionSource_AnimWarping_MultiTargets::ToSimpleString() const
 		TEXT("[ID:%u]FRootMotionSource_AnimWarping_MultiTargets %s"), LocalID, *InstanceName.GetPlainNameString());
 }
 #pragma endregion FRootMotionSource_AnimWarping_MultiTargets
-PRAGMA_ENABLE_OPTIMIZATION
+UE_ENABLE_OPTIMIZATION
